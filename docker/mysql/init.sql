@@ -1,4 +1,5 @@
--- Otorgar permisos para crear bases de datos de tenants (claim_guard_<slug>)
--- El usuario 'claimguard' necesita poder crear DBs en runtime al onboarding de cada tenant
+-- Permisos para la DB landlord y para crear DBs de tenants en runtime.
+-- Las DBs de tenants usan el prefijo 'claimguard_<slug>'.
 GRANT ALL PRIVILEGES ON `claim_guard_%`.* TO 'claimguard'@'%';
+GRANT ALL PRIVILEGES ON `claimguard_%`.*  TO 'claimguard'@'%';
 FLUSH PRIVILEGES;
