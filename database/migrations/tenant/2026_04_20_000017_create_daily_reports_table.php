@@ -26,7 +26,7 @@ return new class extends Migration
             $table->text('safety_incidents')->nullable();
             $table->text('visitors')->nullable();
             $table->text('general_notes')->nullable();
-            $table->foreignId('created_by')->constrained('users');
+            $table->unsignedBigInteger('created_by'); // FK a landlord.users — sin constraint cross-DB
             $table->softDeletes();
             $table->timestamps();
 
