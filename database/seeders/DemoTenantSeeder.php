@@ -74,19 +74,32 @@ class DemoTenantSeeder extends Seeder
     // Landlord: tenant + usuarios
     // ─────────────────────────────────────────────────────────────────────────
 
+    private function resetDemo(): void
+    {
+        // Borra la BD del tenant si existe
+        DB::connection('landlord')->statement('DROP DATABASE IF EXISTS `claimguard_austral`');
+
+        // Borra el tenant (soft delete)
+        Tenant::where('slug', 'austral')->delete();
+
+        // Borra los usuarios del demo (force delete para liberar el email único)
+        $emails = ['admin@austral.cl', 'valentina@austral.cl', 'cristobal@austral.cl', 'patricia@austral.cl'];
+        User::withTrashed()->whereIn('email', $emails)->forceDelete();
+    }
+
     private function seedLandlord(): array
     {
-        $tenant = Tenant::firstOrCreate(
-            ['slug' => 'austral'],
-            [
-                'name'      => 'Ingeniería Austral SpA',
-                'slug'      => 'austral',
-                'domain'    => 'austral',
-                'database'  => 'claimguard_austral',
-                'email'     => 'admin@austral.cl',
-                'is_active' => true,
-            ]
-        );
+        // Limpia datos previos para que el seed sea idempotente
+        $this->resetDemo();
+
+        $tenant = Tenant::create([
+            'name'      => 'Ingeniería Austral SpA',
+            'slug'      => 'austral',
+            'domain'    => 'austral',
+            'database'  => 'claimguard_austral',
+            'email'     => 'admin@austral.cl',
+            'is_active' => true,
+        ]);
 
         // Super admin global (si no existe aún)
         User::firstOrCreate(
@@ -99,27 +112,31 @@ class DemoTenantSeeder extends Seeder
             ]
         );
 
-        $admin = User::firstOrCreate(['email' => 'admin@austral.cl'], [
+        $admin = User::create([
             'tenant_id' => $tenant->id,
             'name'      => 'Roberto Fuentes',
+            'email'     => 'admin@austral.cl',
             'password'  => Hash::make(self::PASSWORD),
         ]);
 
-        $jefe = User::firstOrCreate(['email' => 'valentina@austral.cl'], [
+        $jefe = User::create([
             'tenant_id' => $tenant->id,
             'name'      => 'Valentina Soto',
+            'email'     => 'valentina@austral.cl',
             'password'  => Hash::make(self::PASSWORD),
         ]);
 
-        $terreno = User::firstOrCreate(['email' => 'cristobal@austral.cl'], [
+        $terreno = User::create([
             'tenant_id' => $tenant->id,
             'name'      => 'Cristóbal Mena',
+            'email'     => 'cristobal@austral.cl',
             'password'  => Hash::make(self::PASSWORD),
         ]);
 
-        $gerente = User::firstOrCreate(['email' => 'patricia@austral.cl'], [
+        $gerente = User::create([
             'tenant_id' => $tenant->id,
             'name'      => 'Patricia Araya',
+            'email'     => 'patricia@austral.cl',
             'password'  => Hash::make(self::PASSWORD),
         ]);
 
