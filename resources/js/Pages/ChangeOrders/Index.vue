@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { usePage, router, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import ChangeOrderModal from '@/Components/ChangeOrderModal.vue'
+import { useConfirm } from '@/composables/useConfirm'
 
 const props = defineProps({
     contracts:        { type: Object, default: () => ({}) },
@@ -16,6 +17,7 @@ const props = defineProps({
 
 const page  = usePage()
 const flash = computed(() => page.props.flash)
+const { confirmDelete } = useConfirm()
 
 // Contrato
 const selectedContractId = ref(props.selectedContract?.id ?? null)
@@ -92,8 +94,8 @@ function submitReject() {
 }
 
 // Eliminar
-function deleteOrder(order) {
-    if (!confirm(`¿Eliminar la OC ${order.request_number}?`)) return
+async function deleteOrder(order) {
+    if (!await confirmDelete(order.request_number)) return
     router.delete(route('change-orders.destroy', {
         contract:    props.selectedContract.id,
         changeOrder: order.id,

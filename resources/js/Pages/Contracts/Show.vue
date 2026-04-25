@@ -2,6 +2,7 @@
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { Link, router, usePage, useForm } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
+import { useConfirm } from '@/composables/useConfirm'
 
 const props = defineProps({
     contract:          Object,
@@ -16,6 +17,7 @@ const props = defineProps({
 
 const page  = usePage()
 const flash = computed(() => page.props.flash)
+const { confirmDelete, confirmDanger } = useConfirm()
 
 const statusConfig = {
     borrador:   { bg: 'var(--color-bg-elevated)',       text: 'var(--color-text-secondary)' },
@@ -67,8 +69,8 @@ function uploadPdf() {
     })
 }
 
-function removePdf() {
-    if (!confirm('¿Eliminar el documento base? La IA ya no tendrá acceso al texto del contrato.')) return
+async function removePdf() {
+    if (!await confirmDanger('¿Eliminar documento base?', 'La IA ya no tendrá acceso al texto del contrato.')) return
     router.delete(route('contracts.remove-pdf', props.contract.id))
 }
 
@@ -150,8 +152,8 @@ function submitCpuItem() {
     })
 }
 
-function deleteCpuItem(itemId) {
-    if (!confirm('¿Eliminar este ítem del catálogo?')) return
+async function deleteCpuItem(itemId) {
+    if (!await confirmDelete('este ítem del catálogo')) return
     router.delete(route('price-items.destroy', [props.contract.id, itemId]))
 }
 

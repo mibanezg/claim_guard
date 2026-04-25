@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { usePage, router, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
+import { useConfirm } from '@/composables/useConfirm'
 
 const props = defineProps({
     contracts:         { type: Array,   default: () => [] },
@@ -14,6 +15,7 @@ const props = defineProps({
 
 const page  = usePage()
 const flash = computed(() => page.props.flash)
+const { confirmDelete } = useConfirm()
 
 const selectedContractId = ref(props.selectedContract?.id ?? null)
 
@@ -53,8 +55,8 @@ function handleFile(e) {
 }
 
 // Eliminar
-function deleteDoc(doc) {
-    if (!confirm(`¿Eliminar "${doc.name}"?`)) return
+async function deleteDoc(doc) {
+    if (!await confirmDelete(doc.name)) return
     router.delete(route('documents.destroy', {
         contract: props.selectedContract.id,
         document: doc.id,

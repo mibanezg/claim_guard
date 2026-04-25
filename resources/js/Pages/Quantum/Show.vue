@@ -2,6 +2,7 @@
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { useForm, router, usePage } from '@inertiajs/vue3'
 import { ref, computed, watch } from 'vue'
+import { useConfirm } from '@/composables/useConfirm'
 
 const props = defineProps({
     contract:       { type: Object, required: true },
@@ -19,6 +20,7 @@ const props = defineProps({
 
 const page  = usePage()
 const flash = computed(() => page.props.flash)
+const { confirmDelete } = useConfirm()
 
 const showAddForm = ref(false)
 const searchQuery = ref('')
@@ -88,8 +90,8 @@ function submitItem() {
     })
 }
 
-function deleteItem(id) {
-    if (!confirm('¿Eliminar este ítem del quantum?')) return
+async function deleteItem(id) {
+    if (!await confirmDelete('este ítem del quantum')) return
     router.delete(route('quantum.items.destroy', {
         contract: props.contract.id,
         event:    props.event.id,

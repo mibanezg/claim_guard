@@ -28,5 +28,28 @@ export function useConfirm() {
         return result.isConfirmed
     }
 
-    return { confirmDelete }
+    async function confirmDanger(title, message) {
+        const result = await Swal.fire({
+            title,
+            html: `<span style="color:${css('--color-text-secondary')}">${message}</span>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, continuar',
+            cancelButtonText: 'Cancelar',
+            reverseButtons: true,
+            customClass: {
+                popup:         'swal-popup',
+                title:         'swal-title',
+                confirmButton: 'swal-confirm',
+                cancelButton:  'swal-cancel',
+                icon:          'swal-icon',
+            },
+            buttonsStyling: false,
+            background: css('--color-bg-card'),
+            color: css('--color-text-primary'),
+        })
+        return result.isConfirmed
+    }
+
+    return { confirmDelete, confirmDanger }
 }
