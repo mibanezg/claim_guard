@@ -5,6 +5,7 @@ use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Middleware\TrustProxies;
 use Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession;
 use Spatie\Multitenancy\Http\Middleware\NeedsTenant;
 
@@ -15,6 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Confía en todos los proxies — necesario detrás de Dokploy/Traefik para que
+        // Laravel detecte HTTPS correctamente y genere URLs con https://.
+        $middleware->trustProxies(at: '*');
+
         // Middleware Inertia — comparte auth/tenant con todas las páginas Vue
         $middleware->web(append: [
             HandleInertiaRequests::class,
