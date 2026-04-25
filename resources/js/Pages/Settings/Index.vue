@@ -575,7 +575,7 @@ const azureSteps = [
                                 : 'border-color: var(--color-border); background: var(--color-bg-input);'">
                         <span class="material-symbols-outlined"
                               :style="`font-size: 26px; color: ${aiForm.provider === key ? '#fff' : 'var(--color-text-muted)'};`">
-                            {{ key === 'anthropic' ? 'psychology' : key === 'openai' ? 'auto_awesome' : 'bolt' }}
+                            {{ key === 'anthropic' ? 'psychology' : key === 'openai' ? 'auto_awesome' : key === 'deepseek' ? 'hub' : 'bolt' }}
                         </span>
                         <span class="text-xs font-semibold text-center leading-tight"
                               :style="aiForm.provider === key ? 'color: #fff;' : 'color: var(--color-text-secondary);'">

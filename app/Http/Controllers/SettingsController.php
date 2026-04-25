@@ -193,7 +193,7 @@ class SettingsController extends Controller
     public function saveAiIntegration(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'provider'  => ['required', 'in:anthropic,openai,google'],
+            'provider'  => ['required', 'in:anthropic,openai,google,deepseek'],
             'model'     => ['required', 'string', 'max:80'],
             'api_key'   => ['nullable', 'string', 'max:500'],
             'is_active' => ['boolean'],

@@ -43,6 +43,14 @@ class AiService
             ],
             'default_model' => 'gemini-2.0-flash-lite',
         ],
+        'deepseek' => [
+            'label'  => 'DeepSeek',
+            'models' => [
+                'deepseek-v4-flash' => 'DeepSeek V4 Flash (recomendado)',
+                'deepseek-v4-pro'   => 'DeepSeek V4 Pro',
+            ],
+            'default_model' => 'deepseek-v4-flash',
+        ],
     ];
 
     private ?TenantIntegration $config;
@@ -93,6 +101,7 @@ class AiService
                 'anthropic' => $this->callAnthropic($system, $user, $maxTokens),
                 'openai'    => $this->callOpenAi($system, $user, $maxTokens),
                 'google'    => $this->callGemini($system, $user),
+                'deepseek'  => $this->callDeepSeek($system, $user, $maxTokens),
                 default     => null,
             };
         } catch (\Throwable $e) {
@@ -119,6 +128,7 @@ class AiService
             'anthropic' => $this->callAnthropic('Eres un asistente.', 'Responde solo: OK', 16),
             'openai'    => $this->callOpenAi('Eres un asistente.', 'Responde solo: OK', 16),
             'google'    => $this->callGemini('Eres un asistente.', 'Responde solo: OK'),
+            'deepseek'  => $this->callDeepSeek('Eres un asistente.', 'Responde solo: OK', 16),
             default     => throw new \RuntimeException('Proveedor desconocido.'),
         };
 
@@ -166,6 +176,29 @@ class AiService
 
         if (!$response->successful()) {
             throw new \RuntimeException('OpenAI API error: ' . $response->body());
+        }
+
+        return $response->json('choices.0.message.content') ?? '';
+    }
+
+    // ── DeepSeek ─────────────────────────────────────────────────────────────
+    // API compatible con OpenAI — solo cambia el endpoint y la key.
+
+    private function callDeepSeek(string $system, string $user, int $maxTokens = 2048): string
+    {
+        $response = Http::withToken($this->config->client_secret)
+            ->timeout(60)
+            ->post('https://api.deepseek.com/v1/chat/completions', [
+                'model'      => $this->getModel(),
+                'max_tokens' => $maxTokens,
+                'messages'   => [
+                    ['role' => 'system', 'content' => $system],
+                    ['role' => 'user',   'content' => $user],
+                ],
+            ]);
+
+        if (!$response->successful()) {
+            throw new \RuntimeException('DeepSeek API error: ' . $response->body());
         }
 
         return $response->json('choices.0.message.content') ?? '';

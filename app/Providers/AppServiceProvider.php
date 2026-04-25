@@ -26,9 +26,9 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // Fuerza https:// en producción — necesario detrás de Dokploy/Traefik
-        // que termina SSL antes de llegar a Laravel.
-        if ($this->app->environment('production')) {
+        // Fuerza https:// cuando APP_URL usa HTTPS — necesario detrás de
+        // Dokploy/Traefik que termina SSL y reenvía HTTP interno a Laravel.
+        if (str_starts_with(config('app.url'), 'https://')) {
             URL::forceScheme('https');
         }
 
