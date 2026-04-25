@@ -1,0 +1,6 @@
+ERMHDR	20	2026-01-01	Project	admin	claimguard	Project Manager		Project Planner
+%T	TASK
+%F	task_id	task_code	task_name	target_start_date	target_end_date	phys_complete_pct	driving_path_flag
+%R	TASK-001	A1000	Movimiento de Tierras	2026-01-10 00:00	2026-03-31 00:00	50	N
+%R	TASK-002	A1010	Fundaciones y Hormigón	2026-04-01 00:00	2026-06-30 00:00	0	Y
+%E

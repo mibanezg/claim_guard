@@ -1,0 +1,189 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+@source '../**/*.vue';
+
+/* ============================================================
+   DESIGN TOKENS — Claim Guard
+   Fuente única de verdad para colores y variables CSS.
+   El TenantSettingsMiddleware puede sobreescribir las 5
+   variables personalizables por tenant en runtime.
+   ============================================================ */
+
+:root {
+  /* Primary — Azul corporativo */
+  --color-primary:              #2a6486;
+  --color-primary-dim:          #1a5879;
+  --color-primary-container:    #a2d8ff;
+  --color-on-primary:           #f5f9ff;
+  --color-on-primary-container: #044c6d;
+  --color-primary-fixed:        #a2d8ff;
+  --color-primary-fixed-dim:    #94caf0;
+
+  /* Secondary — Verde corporativo */
+  --color-secondary:            #4a654f;
+  --color-secondary-dim:        #3f5943;
+  --color-secondary-container:  #cceace;
+  --color-on-secondary:         #e8ffe8;
+  --color-on-secondary-container: #3d5842;
+
+  /* Fondos y superficies */
+  --color-bg-page:              #f7f9fb;
+  --color-bg-sidebar:           #f0f4f7;
+  --color-bg-card:              #ffffff;
+  --color-bg-input:             #eaeff2;
+  --color-bg-input-focus:       #ffffff;
+  --color-bg-hover:             #e3e9ed;
+  --color-bg-elevated:          #dce4e8;
+
+  /* Texto */
+  --color-text-primary:         #2c3437;
+  --color-text-secondary:       #596064;
+  --color-text-muted:           #747c80;
+  --color-text-on-primary:      #f5f9ff;
+
+  /* Bordes */
+  --color-border:               #acb3b7;
+  --color-border-variant:       #dce4e8;
+  --color-border-focus:         #2a6486;
+
+  /* Estados del sistema */
+  --color-success:              #4a654f;
+  --color-success-container:    #cceace;
+  --color-warning:              #b45309;
+  --color-warning-container:    #fef3c7;
+  --color-error:                #a83836;
+  --color-error-container:      #fa746f;
+  --color-on-error:             #fff7f6;
+
+  /* Riesgo de claim */
+  --color-risk-low:             #4a654f;
+  --color-risk-low-bg:          #cceace;
+  --color-risk-medium:          #b45309;
+  --color-risk-medium-bg:       #fef3c7;
+  --color-risk-high:            #c2410c;
+  --color-risk-high-bg:         #ffedd5;
+  --color-risk-critical:        #a83836;
+  --color-risk-critical-bg:     #fa746f33;
+
+  /* Estados de contrato */
+  --color-status-draft:         #596064;
+  --color-status-draft-bg:      #eaeff2;
+  --color-status-active:        #4a654f;
+  --color-status-active-bg:     #cceace;
+  --color-status-suspended:     #b45309;
+  --color-status-suspended-bg:  #fef3c7;
+  --color-status-terminated:    #596064;
+  --color-status-terminated-bg: #dce4e8;
+  --color-status-dispute:       #a83836;
+  --color-status-dispute-bg:    #fa746f33;
+
+  /* Tipografía */
+  --font-headline:              'Manrope', sans-serif;
+  --font-body:                  'Inter', sans-serif;
+
+  /* Layout */
+  --sidebar-width:              16rem;
+  --header-height:              4rem;
+
+  /* Sombras */
+  --shadow-card:                0 1px 3px rgba(44, 52, 55, 0.08);
+  --shadow-sidebar-item:        0 1px 2px rgba(44, 52, 55, 0.06);
+  --shadow-primary:             0 4px 14px rgba(42, 100, 134, 0.2);
+  --shadow-modal:               0 20px 60px rgba(44, 52, 55, 0.15);
+
+  /* Gradientes */
+  --gradient-primary:           linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dim) 100%);
+  --radius-sm:   0.25rem;
+  --radius-md:   0.5rem;
+  --radius-lg:   0.75rem;
+  --radius-full: 9999px;
+}
+
+/* ============================================================
+   ESTILOS BASE
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-bg-page);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-headline);
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  user-select: none;
+}
+
+/* ============================================================
+   SWEETALERT2 — estilos del sistema de diseño
+   ============================================================ */
+.swal-popup {
+  border-radius: 1rem !important;
+  padding: 2rem !important;
+  font-family: var(--font-body) !important;
+  box-shadow: var(--shadow-modal) !important;
+}
+.swal-title {
+  font-family: var(--font-headline) !important;
+  font-size: 1.125rem !important;
+  font-weight: 700 !important;
+  color: var(--color-text-primary) !important;
+  margin-bottom: 0.5rem !important;
+}
+.swal-icon { margin-bottom: 1rem !important; }
+.swal-confirm, .swal-cancel {
+  height: 2.75rem;
+  padding: 0 1.5rem;
+  border-radius: 9999px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.875rem;
+  border: none;
+  cursor: pointer;
+  transition: opacity .15s, transform .15s;
+}
+.swal-confirm:active, .swal-cancel:active { transform: scale(0.97); }
+.swal-confirm {
+  background: var(--color-error) !important;
+  color: #fff !important;
+}
+.swal-cancel {
+  background: var(--color-bg-input) !important;
+  color: var(--color-text-primary) !important;
+  margin-right: 0.5rem;
+}
+
+/* ============================================================
+   SELECT — apariencia uniforme, sin estilos nativos del browser
+   ============================================================ */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238A9BA8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.875rem center !important;
+  padding-right: 2.5rem !important;
+  cursor: pointer;
+}
+
+select:focus {
+  background-color: var(--color-bg-input-focus) !important;
+  outline: 2px solid var(--color-primary) !important;
+  outline-offset: 0;
+}
+
+select option {
+  background-color: var(--color-bg-card);
+  color: var(--color-text-primary);
+}

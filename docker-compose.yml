@@ -1,0 +1,119 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  ClaimGuard — Docker Compose para desarrollo local
+#
+#  Uso rápido:
+#    docker compose up -d              → Levanta todo en background
+#    docker compose logs -f app        → Logs en tiempo real
+#    docker compose exec app bash      → Shell dentro del contenedor
+#    docker compose down -v            → Elimina contenedores y volúmenes
+#
+#  Para desarrollo día-a-día puedes usar solo MySQL y Redis y correr PHP
+#  nativo con `php artisan serve` (más rápido en Windows/WSL2):
+#    docker compose up -d mysql redis
+#
+#  Dokploy:
+#    En Dokploy elige "Dockerfile" como tipo de build y configura las
+#    variables de entorno en el panel. MySQL y Redis se crean como servicios
+#    separados en Dokploy (o usa bases de datos gestionadas externas).
+#    Dominio wildcard *.claimguard.cl → configurar en Dokploy > Domains.
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Aplicación Laravel ──────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      APP_NAME: ClaimGuard
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost
+      APP_KEY: "${APP_KEY}"
+
+      DB_CONNECTION: landlord
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_LANDLORD_DATABASE: claim_guard_landlord
+      DB_USERNAME: claimguard
+      DB_PASSWORD: secret
+
+      QUEUE_CONNECTION: redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+
+      CACHE_STORE: redis
+      SESSION_DRIVER: redis
+      SESSION_LIFETIME: 120
+
+      FILESYSTEM_DISK: local
+
+      # Anthropic (opcional — app funciona sin esto)
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+
+      # Chromium sin sandbox (Docker)
+      CHROMIUM_EXECUTABLE: /usr/bin/chromium-browser
+      CHROME_FLAGS: "--no-sandbox --disable-dev-shm-usage"
+
+    volumes:
+      # Persistir archivos subidos entre reinicios del contenedor
+      - app_storage:/var/www/html/storage/app
+      # Logs accesibles desde el host
+      - ./storage/logs:/var/www/html/storage/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost/up"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+
+  # ── MySQL 8 ────────────────────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_secret
+      MYSQL_DATABASE: claim_guard_landlord
+      MYSQL_USER: claimguard
+      MYSQL_PASSWORD: secret
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # Script de inicialización: otorga permisos para crear DBs de tenants
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uclaimguard", "-psecret"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Redis 7 ────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  mysql_data:
+  app_storage:

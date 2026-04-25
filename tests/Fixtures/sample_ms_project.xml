@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Project xmlns="http://schemas.microsoft.com/project">
+    <Tasks>
+        <Task>
+            <UID>0</UID>
+            <Name>Proyecto de Construcción</Name>
+        </Task>
+        <Task>
+            <UID>1</UID>
+            <Name>Inicio de Obras</Name>
+            <Milestone>1</Milestone>
+            <Summary>0</Summary>
+            <Critical>1</Critical>
+            <PercentComplete>100</PercentComplete>
+            <Start>2026-01-05T08:00:00</Start>
+            <Finish>2026-01-05T17:00:00</Finish>
+            <ActualStart>2026-01-05T08:00:00</ActualStart>
+            <ActualFinish>2026-01-05T17:00:00</ActualFinish>
+        </Task>
+        <Task>
+            <UID>2</UID>
+            <Name>Entrega de Frente de Trabajo</Name>
+            <Milestone>0</Milestone>
+            <Summary>0</Summary>
+            <Critical>0</Critical>
+            <PercentComplete>50</PercentComplete>
+            <Start>2026-02-01T08:00:00</Start>
+            <Finish>2026-04-30T17:00:00</Finish>
+        </Task>
+        <Task>
+            <UID>3</UID>
+            <Name>Recepción Provisoria</Name>
+            <Milestone>1</Milestone>
+            <Summary>0</Summary>
+            <Critical>1</Critical>
+            <PercentComplete>0</PercentComplete>
+            <Start>2026-11-01T08:00:00</Start>
+            <Finish>2026-11-30T17:00:00</Finish>
+        </Task>
+    </Tasks>
+</Project>
