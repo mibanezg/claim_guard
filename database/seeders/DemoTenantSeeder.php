@@ -8,7 +8,10 @@ use App\Models\Company;
 use App\Models\Contract;
 use App\Models\ContractLetter;
 use App\Models\ContractMilestone;
+use App\Models\ContractPriceItem;
 use App\Models\ContractualEvent;
+use App\Models\DailyReport;
+use App\Models\EventCostItem;
 use App\Models\Tenant;
 use App\Models\User;
 use Carbon\Carbon;
@@ -355,6 +358,10 @@ class DemoTenantSeeder extends Seeder
                 'concentracion_eventos' => ['label' => 'Concentración de responsabilidad',   'pct_max' => 50, 'points' => 0, 'max' => 15],
             ],
         ]);
+
+        $cpu = $this->seedCPUChancado($contract);
+        $this->seedCostItemsChancado($e1, $e2, $cpu);
+        $this->seedDailyReportsChancado($contract, $terreno, $e1, $e2);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -604,6 +611,276 @@ class DemoTenantSeeder extends Seeder
                 'concentracion_eventos' => ['label' => 'Concentración de responsabilidad', 'pct_max' => 83.3, 'points' => 15, 'max' => 15],
             ],
         ]);
+
+        $cpu = $this->seedCPUObrasCiviles($contract);
+        $this->seedCostItemsObrasCiviles($events[0], $events[1], $events[2], $cpu);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CPU — Chancado
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private function seedCPUChancado(Contract $contract): array
+    {
+        $items = [
+            ['MO-001', 'Capataz de Montaje',                   'hr',  1_700_000, 'mano_obra'],
+            ['MO-002', 'Operador Grúa Torre Liebherr',          'hr',  2_800_000, 'mano_obra'],
+            ['MO-003', 'Soldador Certificado 3G/4G',            'hr',  2_500_000, 'mano_obra'],
+            ['MO-004', 'Rigger / Aparejador',                   'hr',  2_100_000, 'mano_obra'],
+            ['MO-005', 'Ayudante General',                      'hr',  1_200_000, 'mano_obra'],
+            ['MAT-001', 'Hormigón H-30 premezclado',            'm3', 10_000_000, 'materiales'],
+            ['MAT-002', 'Acero A63-42H en barras',              'kg',     90_000, 'materiales'],
+            ['MAT-003', 'Planchas estructurales e=12mm',        'kg',    110_000, 'materiales'],
+            ['MAT-004', 'Perno de anclaje c/tuerca y golilla',  'un',    850_000, 'materiales'],
+            ['EQ-001',  'Grúa Liebherr 600t (arriendo+oper.)', 'hr', 28_500_000, 'equipos'],
+            ['EQ-002',  'Camión Mixer 8m³',                     'hr',  6_500_000, 'equipos'],
+            ['EQ-003',  'Excavadora CAT 320',                   'hr',  9_500_000, 'equipos'],
+            ['SC-001',  'Montaje estructura metálica (SC)',      'kg',     85_000, 'subcontratos'],
+            ['GG-001',  'Gastos generales de obra (mensual)',   'mes', 45_000_000_00, 'gastos_generales'],
+        ];
+
+        return $this->createPriceItems($contract, $items);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CPU — Obras Civiles
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private function seedCPUObrasCiviles(Contract $contract): array
+    {
+        $items = [
+            ['MO-001', 'Capataz de Obras Civiles',              'hr',  2_000_000, 'mano_obra'],
+            ['MO-002', 'Operario Especializado',                 'hr',  1_500_000, 'mano_obra'],
+            ['MO-003', 'Ayudante General',                       'hr',  1_100_000, 'mano_obra'],
+            ['MAT-001', 'Hormigón H-25 en obras sanitarias',    'm3',  9_500_000, 'materiales'],
+            ['MAT-002', 'Tubería HDPE DN315 PN10',               'm',  4_200_000, 'materiales'],
+            ['MAT-003', 'Tubería PVC alcantarillado DN250',      'm',  2_800_000, 'materiales'],
+            ['MAT-004', 'Árido seleccionado para relleno',      'm3',    950_000, 'materiales'],
+            ['EQ-001',  'Retroexcavadora JD 310',               'hr',  7_500_000, 'equipos'],
+            ['EQ-002',  'Rodillo compactador 10t',              'hr',  5_500_000, 'equipos'],
+            ['EQ-003',  'Camión aljibe 10.000 lt',              'hr',  4_800_000, 'equipos'],
+            ['SC-001',  'Pavimento asfalto e=5cm (SC)',         'm2',  2_500_000, 'subcontratos'],
+            ['GG-001',  'Gastos generales de obra (mensual)',   'mes', 28_000_000_00, 'gastos_generales'],
+        ];
+
+        return $this->createPriceItems($contract, $items);
+    }
+
+    private function createPriceItems(Contract $contract, array $items): array
+    {
+        $created = [];
+        foreach ($items as [$code, $description, $unit, $unitCost, $category]) {
+            $created[$code] = ContractPriceItem::create([
+                'contract_id' => $contract->id,
+                'code'        => $code,
+                'description' => $description,
+                'unit'        => $unit,
+                'unit_cost'   => $unitCost,
+                'category'    => $category,
+                'is_active'   => true,
+            ]);
+        }
+        return $created;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Ítems de costo — Chancado
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private function seedCostItemsChancado(
+        ContractualEvent $e1,
+        ContractualEvent $e2,
+        array $cpu
+    ): void {
+        // E1 — Atraso mandante: MO improductiva + gastos generales + grúa en standby
+        $itemsE1 = [
+            [$cpu['MO-001']->id, 'Capataz improductivo — espera entrega frente Sector A',    'hr',   480.0,  1_700_000, 'mano_obra_directa'],
+            [$cpu['MO-002']->id, 'Operador grúa improductivo durante paralización',          'hr',   360.0,  2_800_000, 'mano_obra_directa'],
+            [$cpu['MO-005']->id, 'Ayudantes improductivos en espera de frente',              'hr',  1_440.0, 1_200_000, 'mano_obra_directa'],
+            [$cpu['EQ-001']->id, 'Grúa Liebherr 600t en standby por falta de frente',       'hr',   120.0, 28_500_000, 'equipos'],
+            [null,               'Gastos generales — 45 días de paralización Sector A',      'gl',     1.0, 38_250_000_00, 'gastos_obra'],
+        ];
+
+        foreach ($itemsE1 as [$priceItemId, $description, $unit, $qty, $unitCost, $category]) {
+            $amount = (int) round($qty * $unitCost);
+            EventCostItem::create([
+                'contractual_event_id'   => $e1->id,
+                'contract_price_item_id' => $priceItemId,
+                'description'            => $description,
+                'unit'                   => $unit,
+                'quantity'               => $qty,
+                'unit_cost'              => $unitCost,
+                'amount'                 => $amount,
+                'cost_category'          => $category,
+            ]);
+        }
+
+        // E2 — Condición imprevista: bombeo + refuerzo fundaciones + entibaciones + MO adicional
+        $itemsE2 = [
+            [null,               'Sistema bombeo aguas subterráneas — arriendo y operación 2 meses', 'mes',    2.0, 12_000_000_00, 'equipos'],
+            [$cpu['MAT-001']->id,'Hormigón H-30 adicional en refuerzo de fundaciones',               'm3',   280.0, 10_000_000,    'materiales'],
+            [null,               'Entibaciones metálicas — arriendo e instalación',                  'm2',   420.0,  2_500_000,    'subcontratos'],
+            [$cpu['MO-003']->id, 'Soldadores para anclajes y refuerzos adicionales',                 'hr',   960.0,  2_500_000,    'mano_obra_directa'],
+            [$cpu['MO-005']->id, 'Ayudantes en trabajos de refuerzo geotécnico',                     'hr',  1_200.0, 1_200_000,   'mano_obra_directa'],
+            [null,               'Overhead sede por gestión de contingencia geotécnica',             'gl',     1.0,  8_500_000_00, 'overhead_sede'],
+        ];
+
+        foreach ($itemsE2 as [$priceItemId, $description, $unit, $qty, $unitCost, $category]) {
+            $amount = (int) round($qty * $unitCost);
+            EventCostItem::create([
+                'contractual_event_id'   => $e2->id,
+                'contract_price_item_id' => $priceItemId,
+                'description'            => $description,
+                'unit'                   => $unit,
+                'quantity'               => $qty,
+                'unit_cost'              => $unitCost,
+                'amount'                 => $amount,
+                'cost_category'          => $category,
+            ]);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Ítems de costo — Obras Civiles (disputa)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private function seedCostItemsObrasCiviles(
+        ContractualEvent $eDisputa,
+        ContractualEvent $eLluvias,
+        ContractualEvent $eAtrasoPlanos,
+        array $cpu
+    ): void {
+        // Disputa: modificación de trazados sanitarios instruidos verbalmente
+        $itemsD = [
+            [$cpu['EQ-001']->id, 'Retroexcavadora — excavación trazados modificados',            'hr',   380.0,  7_500_000, 'equipos'],
+            [$cpu['MAT-002']->id,'Tubería HDPE DN315 — tramos adicionales por modificación',     'm',    850.0,  4_200_000, 'materiales'],
+            [$cpu['MAT-004']->id,'Árido seleccionado — relleno de zanjas modificadas',           'm3',   620.0,    950_000, 'materiales'],
+            [$cpu['MO-002']->id, 'MO operarios — instalación tuberías trazados nuevos',         'hr',  1_600.0, 1_500_000, 'mano_obra_directa'],
+            [null,               'Gastos generales por modificación de diseño',                   'gl',    1.0,  9_500_000_00, 'gastos_obra'],
+        ];
+
+        foreach ($itemsD as [$priceItemId, $description, $unit, $qty, $unitCost, $category]) {
+            EventCostItem::create([
+                'contractual_event_id'   => $eDisputa->id,
+                'contract_price_item_id' => $priceItemId,
+                'description'            => $description,
+                'unit'                   => $unit,
+                'quantity'               => $qty,
+                'unit_cost'              => $unitCost,
+                'amount'                 => (int) round($qty * $unitCost),
+                'cost_category'          => $category,
+            ]);
+        }
+
+        // Lluvias excepcionales: paralización + reparación
+        $itemsL = [
+            [$cpu['MO-002']->id, 'Operarios improductivos — paralización por lluvias 22 días', 'día',   22.0,  8_500_000_00, 'mano_obra_directa'],
+            [$cpu['MAT-004']->id,'Árido — reposición rellenos deteriorados por lluvia',        'm3',   750.0,    950_000, 'materiales'],
+            [$cpu['EQ-002']->id, 'Rodillo compactador — recompactación post lluvias',          'hr',   180.0,  5_500_000, 'equipos'],
+            [null,               'Gastos generales durante paralización climática',             'gl',     1.0,  6_500_000_00, 'gastos_obra'],
+        ];
+
+        foreach ($itemsL as [$priceItemId, $description, $unit, $qty, $unitCost, $category]) {
+            EventCostItem::create([
+                'contractual_event_id'   => $eLluvias->id,
+                'contract_price_item_id' => $priceItemId,
+                'description'            => $description,
+                'unit'                   => $unit,
+                'quantity'               => $qty,
+                'unit_cost'              => $unitCost,
+                'amount'                 => (int) round($qty * $unitCost),
+                'cost_category'          => $category,
+            ]);
+        }
+
+        // Atraso en planos: MO improductiva esperando diseño definitivo
+        EventCostItem::create([
+            'contractual_event_id'   => $eAtrasoPlanos->id,
+            'contract_price_item_id' => $cpu['MO-002']->id,
+            'description'            => 'MO improductiva — espera de planos definitivos sanitarios (30 días)',
+            'unit'                   => 'hr',
+            'quantity'               => 720.0,
+            'unit_cost'              => 1_500_000,
+            'amount'                 => 1_080_000_000,
+            'cost_category'          => 'mano_obra_directa',
+        ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Diarios de obra — Chancado (10 registros)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private function seedDailyReportsChancado(
+        Contract $contract,
+        User $terreno,
+        ContractualEvent $e1,
+        ContractualEvent $e2
+    ): void {
+        $reports = [
+            [1,  'bueno',        24, 'Montaje estructura metálica nivel +12.00. Instalación de 48 columnas HEA300. Avance acumulado 72%. Sin novedades de seguridad.',
+             null, null],
+            [2,  'nublado',      19, 'Continuación soldadura de uniones en nivel +8.00. Se completaron 32 juntas de filete. Inspección de ITO sin observaciones.',
+             null, null],
+            [3,  'bueno',        22, 'Instalación de vigas secundarias en sectores A y B. Hormigonado de dados de fundación eje 4-4. Temperatura hormigón: 18°C.',
+             null, null],
+            [4,  'lluvia',       14, 'Paralización de actividades en altura por lluvia y viento. Personal en faenas cubiertas: limpieza y habilitación de áreas. Se registra inicio de paralización imputable a condiciones climáticas.',
+             null, 'Lluvia intensa desde las 09:30. Se suspenden trabajos en altura por protocolo de seguridad. ITO notificado vía correo a las 10:15.'],
+            [5,  'nublado',      17, 'Reinicio de actividades. Inspección de estructura post lluvia. Sin daños. Retiro de agua acumulada en excavaciones con equipo de bombeo.',
+             null, null],
+            [6,  'bueno',        21, 'Montaje grúa torre sector Chancador Primario. Izaje de 6 vigas principales HEB500. Peso máximo izado: 18,4 t.',
+             null, null],
+            [7,  'bueno',        23, 'Detección de napa subterránea en excavación Sector Fundaciones F-12. Se informa inmediatamente a ITO y se activa protocolo de contingencia geotécnica.',
+             'Ing. Andrés Villablanca (ITO Mandante) — Instrucción verbal de suspender excavaciones Sector F-12 hasta nuevo aviso y presentar informe geotécnico en 48 hrs.',
+             'Napa a 2,8m de profundidad, no prevista en estudio base. Caudal estimado 3 lt/min.'],
+            [8,  'bueno',        20, 'Paralización excavaciones Sector F-12 conforme instrucción ITO. Continuación trabajos en sectores F-1 a F-11 sin novedad. Inicio de bombeo preliminar.',
+             null, null],
+            [9,  'nublado',      18, 'Llegada empresa especialista geotecnia para inspección napa. Toma de muestras de suelo y agua. Personal en espera de directrices.',
+             'ITO confirma necesidad de rediseño de fundaciones Sector F-12. Solicita propuesta de solución en 5 días hábiles.',
+             'Espera de resolución geotécnica. 45 operarios improductivos durante 6 horas.'],
+            [10, 'bueno',        22, 'Presentación de informe geotécnico a Mandante. Propuesta de solución: sistema de wellpoints + refuerzo fundaciones con micropilotes. Mandante confirma aprobación preliminar.',
+             null, null],
+        ];
+
+        foreach ($reports as $i => [$daysAgo, $weather, $temp, $work, $instructions, $issues]) {
+            $date = now()->subDays($daysAgo)->toDateString();
+
+            $report = DailyReport::create([
+                'contract_id'          => $contract->id,
+                'report_date'          => $date,
+                'report_number'        => 'DO-2024-CHN-' . str_pad($i + 1, 4, '0', STR_PAD_LEFT),
+                'weather'              => $weather,
+                'temperature'          => $temp,
+                'work_executed'        => $work,
+                'instructions_received'=> $instructions,
+                'issues_encountered'   => $issues,
+                'personnel_on_site'    => [
+                    ['trade' => 'Capataz',          'count' => 1],
+                    ['trade' => 'Operador Grúa',    'count' => 2],
+                    ['trade' => 'Soldador 3G/4G',   'count' => 4],
+                    ['trade' => 'Rigger',            'count' => 2],
+                    ['trade' => 'Ayudante General', 'count' => 8 + ($daysAgo <= 3 ? 4 : 0)],
+                ],
+                'equipment_on_site' => [
+                    ['name' => 'Grúa Liebherr 600t',  'quantity' => 1],
+                    ['name' => 'Camión Mixer 8m³',     'quantity' => $daysAgo === 3 ? 2 : 0],
+                    ['name' => 'Excavadora CAT 320',   'quantity' => $daysAgo >= 7 ? 0 : 1],
+                ],
+                'materials_received' => $daysAgo === 3
+                    ? 'Despacho 28 m³ hormigón H-30 (O/C N°2024-CHN-MAT-042). Temperatura mezcla: 18°C.'
+                    : null,
+                'safety_incidents' => null,
+                'visitors'         => $daysAgo === 7 ? 'Ing. Andrés Villablanca (ITO Mandante) — inspección rutinaria' : null,
+                'created_by'       => $terreno->id,
+            ]);
+
+            // Vincular diarios al evento correspondiente
+            if (in_array($daysAgo, [7, 8, 9, 10])) {
+                $report->events()->attach($e2->id); // Condición geotécnica
+            }
+            if ($daysAgo === 4) {
+                // Día de lluvia — no vinculado a evento formal (es nota interna)
+            }
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
