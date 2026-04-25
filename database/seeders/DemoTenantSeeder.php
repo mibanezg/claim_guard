@@ -13,6 +13,8 @@ use App\Models\Tenant;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class DemoTenantSeeder extends Seeder
@@ -22,6 +24,19 @@ class DemoTenantSeeder extends Seeder
     public function run(): void
     {
         [$tenant, $users] = $this->seedLandlord();
+
+        // Crea la DB del tenant si no existe y corre sus migraciones
+        $dbName = $tenant->getDatabaseName();
+        DB::connection('landlord')->statement(
+            "CREATE DATABASE IF NOT EXISTS `{$dbName}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+        );
+        $tenant->makeCurrent();
+        Artisan::call('migrate', [
+            '--path'     => 'database/migrations/tenant',
+            '--database' => 'tenant',
+            '--force'    => true,
+        ]);
+        Tenant::forgetCurrent();
 
         $tenant->execute(function () use ($users) {
             $this->call(RolesAndPermissionsSeeder::class);
