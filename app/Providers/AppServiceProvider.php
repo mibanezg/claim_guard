@@ -17,6 +17,7 @@ use App\Policies\EventPolicy;
 use App\Policies\LetterPolicy;
 use App\Policies\UserPolicy;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -25,6 +26,12 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Fuerza https:// en producción — necesario detrás de Dokploy/Traefik
+        // que termina SSL antes de llegar a Laravel.
+        if ($this->app->environment('production')) {
+            URL::forceScheme('https');
+        }
+
         // Super admin bypasses todas las policies
         Gate::before(function (User $user, string $ability) {
             if ($user->is_super_admin) {
