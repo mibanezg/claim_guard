@@ -209,20 +209,34 @@ USER;
             return;
         }
 
-        // Extraer JSON de la respuesta
-        preg_match('/\{.*\}/s', $response, $matches);
-        if (empty($matches[0])) {
+        // Extraer JSON de la respuesta (maneja markdown code fences y texto extra)
+        $data = null;
+
+        // Intento 1: respuesta es JSON puro
+        $data = json_decode($response, true);
+
+        // Intento 2: JSON dentro de ```json ... ```
+        if (!is_array($data)) {
+            preg_match('/```(?:json)?\s*(\{.*?\})\s*```/s', $response, $m);
+            if (!empty($m[1])) $data = json_decode($m[1], true);
+        }
+
+        // Intento 3: primer bloque { ... } del texto
+        if (!is_array($data)) {
+            preg_match('/\{.*\}/s', $response, $m);
+            if (!empty($m[0])) $data = json_decode($m[0], true);
+        }
+
+        if (!is_array($data)) {
             $analysis->update([
                 'status'        => 'failed',
                 'error_message' => 'La respuesta de IA no pudo ser procesada. Intenta nuevamente.',
             ]);
-            Log::warning('AnalyzeClaimExposureJob: respuesta no parseable', ['response' => substr($response, 0, 500)]);
-            return;
-        }
-
-        $data = json_decode($matches[0], true);
-        if (!is_array($data)) {
-            $analysis->update(['status' => 'failed', 'error_message' => 'JSON inválido en respuesta de IA.']);
+            Log::warning('AnalyzeClaimExposureJob: JSON no parseable', [
+                'analysis_id'  => $this->analysisId,
+                'json_error'   => json_last_error_msg(),
+                'response_raw' => substr($response, 0, 2000),
+            ]);
             return;
         }
 
