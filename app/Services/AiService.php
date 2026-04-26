@@ -145,7 +145,7 @@ class AiService
             'x-api-key'         => $this->config->client_secret,
             'anthropic-version' => '2023-06-01',
             'content-type'      => 'application/json',
-        ])->timeout(60)->post('https://api.anthropic.com/v1/messages', [
+        ])->timeout(120)->post('https://api.anthropic.com/v1/messages', [
             'model'      => $this->getModel(),
             'max_tokens' => $maxTokens,
             'system'     => $system,

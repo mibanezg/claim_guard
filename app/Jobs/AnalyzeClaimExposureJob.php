@@ -198,7 +198,7 @@ Con base en todos los datos anteriores, entrega tu dictamen estratégico en el s
 }
 USER;
 
-        $response = $ai->complete($system, $user, 3000);
+        $response = $ai->complete($system, $user, 4096);
 
         if (!$response) {
             $analysis->update([
