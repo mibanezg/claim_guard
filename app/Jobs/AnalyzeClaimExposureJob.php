@@ -28,12 +28,17 @@ class AnalyzeClaimExposureJob implements ShouldQueue
         private int $tenantId,
     ) {}
 
-    public function handle(AiService $ai, DailyReportService $dailyReportService): void
+    public function handle(): void
     {
         $tenant = Tenant::find($this->tenantId);
         if (!$tenant) return;
 
         $tenant->makeCurrent();
+
+        // Instanciar servicios DESPUÉS de makeCurrent() para que lean la
+        // integración correcta del tenant (en async queue no hay tenant activo al inicio)
+        $ai                 = app(AiService::class);
+        $dailyReportService = app(DailyReportService::class);
 
         $analysis = ContractAiAnalysis::find($this->analysisId);
         if (!$analysis) return;
