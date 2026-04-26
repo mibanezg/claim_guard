@@ -79,10 +79,6 @@ function fmt(amount) {
     }).format(amount)
 }
 
-function goToEvents(eventId) {
-    router.get(route('events.index'), { contract_id: props.selectedContract?.id })
-}
-
 function goToLetters() {
     router.get(route('letters.index'), { contract_id: props.selectedContract?.id })
 }
@@ -295,7 +291,7 @@ function goToLetters() {
                                             <div class="flex flex-col gap-1.5">
                                                 <!-- Si no tiene reserva: sugerir crearla -->
                                                 <button v-if="e.rights_status === 'none'"
-                                                        @click="goToEvents(e.id)"
+                                                        @click="goToLetters"
                                                         class="px-3 py-1.5 rounded-lg text-xs font-bold"
                                                         style="background: var(--color-error-container); color: var(--color-on-error-container); border: none; cursor: pointer;">
                                                     Registrar reserva
