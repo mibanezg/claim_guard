@@ -12,6 +12,7 @@ use App\Models\ContractPriceItem;
 use App\Models\ContractualEvent;
 use App\Models\DailyReport;
 use App\Models\EventCostItem;
+use App\Models\EventDelayAnalysis;
 use App\Models\Tenant;
 use App\Models\User;
 use Carbon\Carbon;
@@ -50,11 +51,11 @@ class DemoTenantSeeder extends Seeder
             $terreno->assignRole('field_engineer');
             $gerente->assignRole('manager');
 
-            [$mandante, $contratista1, $contratista2] = $this->seedCompanies();
+            [$mandante, $austral] = $this->seedCompanies();
 
-            $this->seedContractChancado($admin, $jefe, $terreno, $mandante, $contratista1);
-            $this->seedContractCintas($admin, $jefe, $terreno, $mandante, $contratista2);
-            $this->seedContractObrasCiviles($admin, $jefe, $terreno, $mandante, $contratista1);
+            $this->seedContractChancado($admin, $jefe, $terreno, $mandante, $austral);
+            $this->seedContractCintas($admin, $jefe, $terreno, $mandante, $austral);
+            $this->seedContractObrasCiviles($admin, $jefe, $terreno, $mandante, $austral);
         });
 
         $this->command->info('');
@@ -157,23 +158,16 @@ class DemoTenantSeeder extends Seeder
             'contact_email' => 'avillablanca@minera-cordillera.cl',
         ]);
 
-        $contratista1 = Company::firstOrCreate(['rut' => '93.456.000-1'], [
-            'name'          => 'Constructora SCI Ingeniería Ltda.',
+        // Modelo A: Ingeniería Austral SpA es el contratista en todos los contratos
+        $austral = Company::firstOrCreate(['rut' => '77.654.321-0'], [
+            'name'          => 'Ingeniería Austral SpA',
             'type'          => 'contratista',
-            'address'       => 'Los Conquistadores 1700, Providencia, Santiago',
-            'contact_name'  => 'Felipe Bravo',
-            'contact_email' => 'f.bravo@sci-ingenieria.cl',
+            'address'       => 'Av. Vitacura 2939, Piso 12, Las Condes, Santiago',
+            'contact_name'  => 'Roberto Fuentes',
+            'contact_email' => 'admin@austral.cl',
         ]);
 
-        $contratista2 = Company::firstOrCreate(['rut' => '81.234.500-8'], [
-            'name'          => 'Servicios Industriales Norte S.A.',
-            'type'          => 'contratista',
-            'address'       => 'Arturo Prat 1020, Antofagasta',
-            'contact_name'  => 'Lorena Tapia',
-            'contact_email' => 'ltapia@si-norte.cl',
-        ]);
-
-        return [$mandante, $contratista1, $contratista2];
+        return [$mandante, $austral];
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -211,10 +205,10 @@ class DemoTenantSeeder extends Seeder
         // Hitos
         $this->createMilestone($contract, 'Ingeniería de Detalle', now()->subMonths(14), now()->subMonths(13), 100, 'completado');
         $this->createMilestone($contract, 'Movimiento de Tierras y Excavaciones', now()->subMonths(10), now()->subMonths(9), 100, 'completado');
-        $this->createMilestone($contract, 'Obras Civiles Fundaciones', now()->subMonths(4), null, 60, 'atrasado', true);
-        $this->createMilestone($contract, 'Montaje Estructura Metálica', now()->subMonths(1), null, 25, 'en_progreso', true);
+        $mFundaciones = $this->createMilestone($contract, 'Obras Civiles Fundaciones', now()->subMonths(4), null, 60, 'atrasado', true);
+        $mMontaje     = $this->createMilestone($contract, 'Montaje Estructura Metálica', now()->subMonths(1), null, 25, 'en_progreso', true);
         $this->createMilestone($contract, 'Montaje Equipos y Chancadores', now()->addMonths(3), null, 0, 'pendiente');
-        $this->createMilestone($contract, 'Pruebas y Puesta en Marcha', now()->addMonths(5), null, 0, 'pendiente', true);
+        $mPuestaMarcha = $this->createMilestone($contract, 'Pruebas y Puesta en Marcha', now()->addMonths(5), null, 0, 'pendiente', true);
 
         // Eventos — 3 sin resolver > 15 días
         $e1 = ContractualEvent::create([
@@ -376,6 +370,31 @@ class DemoTenantSeeder extends Seeder
             ],
         ]);
 
+        // Análisis CPM para eventos con impacto plazo imputables al mandante/fuerza mayor
+        EventDelayAnalysis::create([
+            'contractual_event_id'  => $e1->id,
+            'affected_milestone_id' => $mFundaciones->id,
+            'delay_type'            => 'compensable',
+            'is_critical_path'      => true,
+            'analysis_method'       => 'as_planned_vs_as_built',
+            'baseline_date'         => now()->subMonths(4)->toDateString(),
+            'impacted_date'         => now()->subMonths(4)->addDays(45)->toDateString(),
+            'float_consumed'        => 0,
+            'narrative'             => 'El atraso en entrega del frente de trabajo Sector A impactó directamente el inicio de Obras Civiles Fundaciones, hito en ruta crítica. El análisis As-Planned vs As-Built demuestra que los 45 días de demora son íntegramente imputables al Mandante.',
+        ]);
+
+        EventDelayAnalysis::create([
+            'contractual_event_id'  => $e2->id,
+            'affected_milestone_id' => $mMontaje->id,
+            'delay_type'            => 'excusable',
+            'is_critical_path'      => true,
+            'analysis_method'       => 'time_impact',
+            'baseline_date'         => now()->subMonths(1)->toDateString(),
+            'impacted_date'         => now()->subMonths(1)->addDays(30)->toDateString(),
+            'float_consumed'        => 5,
+            'narrative'             => 'La condición geotécnica imprevista (napa subterránea Sector F-12) generó un Time Impact de 30 días sobre el hito Montaje Estructura Metálica. El análisis TIA confirma que el evento consumió la totalidad del float disponible y afectó el camino crítico.',
+        ]);
+
         $cpu = $this->seedCPUChancado($contract);
         $this->seedCostItemsChancado($e1, $e2, $cpu);
         $this->seedDailyReportsChancado($contract, $terreno, $e1, $e2);
@@ -508,9 +527,9 @@ class DemoTenantSeeder extends Seeder
 
         $this->createMilestone($contract, 'Caminos de Acceso',            now()->subMonths(20), now()->subMonths(18), 100, 'completado');
         $this->createMilestone($contract, 'Instalaciones de Faena',       now()->subMonths(16), now()->subMonths(14), 100, 'completado');
-        $this->createMilestone($contract, 'Sistema de Agua Potable',      now()->subMonths(10), null, 70, 'atrasado', true);
-        $this->createMilestone($contract, 'Sistema Alcantarillado',       now()->subMonths(8),  null, 40, 'atrasado', true);
-        $this->createMilestone($contract, 'Pavimentación Interna',        now()->subMonths(6),  null, 10, 'atrasado', true);
+        $mAgua       = $this->createMilestone($contract, 'Sistema de Agua Potable',      now()->subMonths(10), null, 70, 'atrasado', true);
+        $mAlcantarill = $this->createMilestone($contract, 'Sistema Alcantarillado',      now()->subMonths(8),  null, 40, 'atrasado', true);
+        $mPavimento  = $this->createMilestone($contract, 'Pavimentación Interna',        now()->subMonths(6),  null, 10, 'atrasado', true);
         $this->createMilestone($contract, 'Recepciones y Permisos Finales', now()->subMonths(4), null, 0, 'atrasado', true);
 
         $events = [];
@@ -627,6 +646,44 @@ class DemoTenantSeeder extends Seeder
                 'monto_disputa'         => ['label' => 'Monto en disputa vs monto vigente', 'porcentaje' => 41.6, 'points' => 15, 'max' => 15],
                 'concentracion_eventos' => ['label' => 'Concentración de responsabilidad', 'pct_max' => 83.3, 'points' => 15, 'max' => 15],
             ],
+        ]);
+
+        // Análisis CPM para los 3 eventos con impacto plazo
+        EventDelayAnalysis::create([
+            'contractual_event_id'  => $events[0]->id,
+            'affected_milestone_id' => $mAgua->id,
+            'delay_type'            => 'compensable',
+            'is_critical_path'      => true,
+            'analysis_method'       => 'as_planned_vs_as_built',
+            'baseline_date'         => now()->subMonths(10)->toDateString(),
+            'impacted_date'         => now()->subMonths(10)->addDays(60)->toDateString(),
+            'float_consumed'        => 0,
+            'narrative'             => 'Los trabajos adicionales de modificación de trazados sanitarios, instruidos verbalmente por ITO sin OC formal, generaron un impacto de 60 días en ruta crítica. El análisis As-Planned vs As-Built confirma que la fecha de término de Sistema de Agua Potable se desplazó íntegramente por causa imputable al Mandante.',
+        ]);
+
+        EventDelayAnalysis::create([
+            'contractual_event_id'  => $events[1]->id,
+            'affected_milestone_id' => $mAlcantarill->id,
+            'delay_type'            => 'excusable',
+            'is_critical_path'      => true,
+            'analysis_method'       => 'contemporaneo',
+            'baseline_date'         => now()->subMonths(8)->toDateString(),
+            'impacted_date'         => now()->subMonths(8)->addDays(45)->toDateString(),
+            'float_consumed'        => 0,
+            'concurrent_cause'      => 'El Mandante desconoció la extensión de plazo pese a los registros meteorológicos presentados.',
+            'narrative'             => 'Las lluvias excepcionales del período julio-agosto (superaron en 380% el promedio histórico) generaron paralización de faenas y daños en rellenos ejecutados. El análisis contemporáneo basado en diarios de obra, registros meteorológicos e informes de terreno acredita 45 días de impacto en camino crítico.',
+        ]);
+
+        EventDelayAnalysis::create([
+            'contractual_event_id'  => $events[2]->id,
+            'affected_milestone_id' => $mPavimento->id,
+            'delay_type'            => 'compensable',
+            'is_critical_path'      => false,
+            'analysis_method'       => 'time_impact',
+            'baseline_date'         => now()->subMonths(6)->toDateString(),
+            'impacted_date'         => now()->subMonths(6)->addDays(30)->toDateString(),
+            'float_consumed'        => 15,
+            'narrative'             => 'El atraso de 30 días en entrega de planos definitivos sanitarios, reconocido por el Mandante, consumió el float disponible de Pavimentación Interna y contribuyó al atraso acumulado del proyecto.',
         ]);
 
         $cpu = $this->seedCPUObrasCiviles($contract);
@@ -912,8 +969,8 @@ class DemoTenantSeeder extends Seeder
         int $progress,
         string $status,
         bool $critical = false
-    ): void {
-        ContractMilestone::create([
+    ): ContractMilestone {
+        return ContractMilestone::create([
             'contract_id'            => $contract->id,
             'name'                   => $name,
             'planned_date'           => $planned->toDateString(),
