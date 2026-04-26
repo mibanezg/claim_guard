@@ -278,10 +278,11 @@ USER;
 
     private function repairJsonString(string $json): string
     {
-        $out    = '';
-        $inStr  = false;
-        $esc    = false;
-        $len    = strlen($json);
+        $out      = '';
+        $inDouble = false;
+        $inSingle = false;
+        $esc      = false;
+        $len      = strlen($json);
 
         for ($i = 0; $i < $len; $i++) {
             $c = $json[$i];
@@ -289,28 +290,60 @@ USER;
             if ($esc) { $out .= $c; $esc = false; continue; }
             if ($c === '\\') { $out .= $c; $esc = true; continue; }
 
-            if ($c === '"') {
-                if (!$inStr) {
-                    $inStr = true;
-                    $out .= $c;
+            // Double-quoted strings (only when not inside single-quoted)
+            if ($c === '"' && !$inSingle) {
+                if (!$inDouble) {
+                    $inDouble = true;
+                    $out .= '"';
                 } else {
-                    // ¿Cierre de string o comilla literal dentro del texto?
                     $rest = ltrim(substr($json, $i + 1));
                     $next = $rest !== '' ? $rest[0] : '';
                     if ($next === '' || in_array($next, [':', ',', '}', ']'])) {
-                        $inStr = false;
-                        $out .= $c;        // es el cierre legítimo
+                        $inDouble = false;
+                        $out .= '"';
                     } else {
-                        $out .= '\\"';     // comilla literal — escapar
+                        $out .= '\\"';
                     }
                 }
                 continue;
             }
 
-            // Newline real dentro de string → espacio
-            if ($inStr && ($c === "\n" || $c === "\r")) {
+            // Single-quoted strings → convert to double-quoted (only when not inside double-quoted)
+            if ($c === "'" && !$inDouble) {
+                if (!$inSingle) {
+                    $inSingle = true;
+                    $out .= '"';
+                } else {
+                    $rest = ltrim(substr($json, $i + 1));
+                    $next = $rest !== '' ? $rest[0] : '';
+                    if ($next === '' || in_array($next, [':', ',', '}', ']'])) {
+                        $inSingle = false;
+                        $out .= '"';
+                    } else {
+                        $out .= "'"; // Apostrophe inside string — valid in double-quoted JSON
+                    }
+                }
+                continue;
+            }
+
+            // Newlines inside any string → space
+            if (($inDouble || $inSingle) && ($c === "\n" || $c === "\r")) {
                 $out .= ' ';
                 continue;
+            }
+
+            // Inside single-quoted string: escape any double quotes encountered
+            if ($inSingle && $c === '"') {
+                $out .= '\\"';
+                continue;
+            }
+
+            // Trailing comma antes de } o ] → eliminar
+            if (!$inDouble && !$inSingle && ($c === '}' || $c === ']')) {
+                $trimmed = rtrim($out);
+                if (str_ends_with($trimmed, ',')) {
+                    $out = substr($trimmed, 0, -1);
+                }
             }
 
             $out .= $c;
