@@ -133,8 +133,11 @@ la exposición al claim. No das consejos genéricos. Cada observación debe hace
 concretos del contrato: fechas específicas, montos, eventos o cartas mencionados en el contexto.
 
 Respondes en español formal chileno.
-IMPORTANTE: Responde ÚNICAMENTE con el objeto JSON, sin ningún texto antes ni después.
-NO uses bloques de código markdown (no uses ```json ni ```). Solo el JSON puro.
+REGLAS ESTRICTAS DE FORMATO:
+1. Responde ÚNICAMENTE con el objeto JSON, sin texto antes ni después.
+2. NO uses bloques de código markdown (no uses ```json ni backticks).
+3. NUNCA uses saltos de línea reales dentro de los valores de string JSON. Usa \n si necesitas separar párrafos.
+4. Todos los valores de texto deben estar en una sola línea continua dentro de las comillas.
 SYSTEM;
 
         $user = <<<USER
@@ -175,7 +178,7 @@ INDICADOR DE RIESGO ACTUAL:
 Con base en todos los datos anteriores, entrega tu dictamen estratégico en el siguiente JSON exacto:
 
 {
-  "exposure_assessment": "Evaluación narrativa de la exposición al claim. 3-5 párrafos. Referencia eventos específicos, fechas y montos concretos. Incluye una estimación de si hay entitlement para un claim y en qué se funda.",
+  "exposure_assessment": "Texto continuo en una sola línea (sin saltos de línea reales). Evalúa la exposición al claim referenciando eventos específicos, fechas y montos. Incluye estimación de entitlement y su fundamento.",
   "strong_points": [
     "Punto fuerte concreto con referencia a datos específicos",
     "..."
@@ -218,7 +221,7 @@ USER;
             return;
         }
 
-        // Extraer JSON — la IA puede envolver en ```json ... ``` aunque se le pida que no
+        // Extraer JSON — la IA puede envolver en ```json``` o meter newlines en strings
         $data = null;
 
         // Paso 1: eliminar markdown fences si existen
@@ -234,10 +237,28 @@ USER;
             if (!empty($m[0])) $data = json_decode($m[0], true) ?: null;
         }
 
-        // Paso 4: fallback sobre respuesta original
+        // Paso 4: reparar newlines reales dentro de strings JSON
+        if (!$data) {
+            $candidate = !empty($m[0]) ? $m[0] : $stripped;
+            $fixed = preg_replace_callback(
+                '/"((?:[^"\\\\]|\\\\.)*)"/s',
+                fn($match) => '"' . str_replace(["\r\n", "\r", "\n"], '\\n', $match[1]) . '"',
+                $candidate
+            );
+            $data = json_decode($fixed, true) ?: null;
+        }
+
+        // Paso 5: fallback sobre respuesta original con misma reparación
         if (!$data) {
             preg_match('/\{.*\}/s', $response, $m);
-            if (!empty($m[0])) $data = json_decode($m[0], true) ?: null;
+            if (!empty($m[0])) {
+                $fixed = preg_replace_callback(
+                    '/"((?:[^"\\\\]|\\\\.)*)"/s',
+                    fn($match) => '"' . str_replace(["\r\n", "\r", "\n"], '\\n', $match[1]) . '"',
+                    $m[0]
+                );
+                $data = json_decode($fixed, true) ?: null;
+            }
         }
 
         if (!is_array($data)) {
