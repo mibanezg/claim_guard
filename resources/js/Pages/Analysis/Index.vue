@@ -40,8 +40,8 @@ onUnmounted(() => {
 function startPolling() {
     stopPolling()
     pollInterval = setInterval(() => {
-        router.reload({ only: ['analysis', 'isProcessing'] })
-    }, 4000)
+        router.reload({ preserveScroll: true })
+    }, 5000)
 }
 
 function stopPolling() {

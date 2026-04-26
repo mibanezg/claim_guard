@@ -228,9 +228,10 @@ USER;
         }
 
         if (!is_array($data)) {
+            $preview = substr($response, 0, 300);
             $analysis->update([
                 'status'        => 'failed',
-                'error_message' => 'La respuesta de IA no pudo ser procesada. Intenta nuevamente.',
+                'error_message' => 'JSON no parseable. Error: ' . json_last_error_msg() . ' | Respuesta: ' . $preview,
             ]);
             Log::warning('AnalyzeClaimExposureJob: JSON no parseable', [
                 'analysis_id'  => $this->analysisId,
