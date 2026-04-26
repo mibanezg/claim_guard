@@ -1,7 +1,7 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { computed, watch, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({
     contracts:        { type: Object,  required: true },
@@ -24,7 +24,11 @@ function requestAnalysis() {
     router.post(route('analysis.generate', { contract: props.selectedContract.id }))
 }
 
-// Polling mientras el análisis está procesando
+// Cuando isProcessing pasa a false (job terminó), para el polling
+watch(() => props.isProcessing, (processing) => {
+    if (!processing) stopPolling()
+})
+
 onMounted(() => {
     if (props.isProcessing) startPolling()
 })
@@ -34,10 +38,9 @@ onUnmounted(() => {
 })
 
 function startPolling() {
+    stopPolling()
     pollInterval = setInterval(() => {
-        router.reload({ only: ['analysis', 'isProcessing'], onSuccess: () => {
-            if (!props.isProcessing) stopPolling()
-        }})
+        router.reload({ only: ['analysis', 'isProcessing'] })
     }, 4000)
 }
 
