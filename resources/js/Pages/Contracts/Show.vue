@@ -19,6 +19,13 @@ const page  = usePage()
 const flash = computed(() => page.props.flash)
 const { confirmDelete, confirmDanger } = useConfirm()
 
+const can = computed(() => {
+    const perms = page.props.auth?.user?.permissions ?? []
+    return {
+        edit: perms.includes('contracts.edit'),
+    }
+})
+
 const statusConfig = {
     borrador:   { bg: 'var(--color-bg-elevated)',       text: 'var(--color-text-secondary)' },
     vigente:    { bg: 'var(--color-success-container)', text: 'var(--color-on-success-container)' },
@@ -216,7 +223,7 @@ function fmtCost(centavos, currency) {
 
             <!-- Acciones -->
             <div class="flex items-center gap-3">
-                <div v-if="contract.allowed_transitions.length > 0" class="flex items-center gap-2">
+                <div v-if="can.edit && contract.allowed_transitions.length > 0" class="flex items-center gap-2">
                     <button
                         v-for="t in contract.allowed_transitions" :key="t"
                         class="px-4 py-2 rounded-full text-sm font-bold transition-all active:scale-95"
@@ -234,7 +241,7 @@ function fmtCost(centavos, currency) {
                     <span class="material-symbols-outlined" style="font-size: 16px;">fact_check</span>
                     Estado del Claim
                 </Link>
-                <Link
+                <Link v-if="can.edit"
                     :href="route('contracts.edit', contract.id)"
                     class="flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm transition-all active:scale-95"
                     style="background: var(--gradient-primary); color: var(--color-on-primary); box-shadow: var(--shadow-primary);"
