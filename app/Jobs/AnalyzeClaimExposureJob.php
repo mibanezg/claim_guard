@@ -210,7 +210,7 @@ Con base en todos los datos anteriores, entrega tu dictamen estratégico en el s
 }
 USER;
 
-        $response = $ai->complete($system, $user, 4096);
+        $response = $ai->complete($system, $user, 8192);
 
         if (!$response) {
             $analysis->update([
@@ -225,14 +225,19 @@ USER;
         $data = $this->parseAiJson($response);
 
         if (!is_array($data)) {
+            $tail = strlen($response) > 300 ? '...[FINAL: ' . substr($response, -200) . ']' : '';
             $analysis->update([
                 'status'        => 'failed',
-                'error_message' => 'JSON no parseable. Error: ' . json_last_error_msg() . ' | Respuesta: ' . substr($response, 0, 300),
+                'error_message' => 'JSON no parseable. Error: ' . json_last_error_msg()
+                    . ' | Inicio: ' . substr($response, 0, 200)
+                    . $tail,
             ]);
             Log::warning('AnalyzeClaimExposureJob: JSON no parseable', [
-                'analysis_id'  => $this->analysisId,
-                'json_error'   => json_last_error_msg(),
-                'response_raw' => substr($response, 0, 2000),
+                'analysis_id'   => $this->analysisId,
+                'json_error'    => json_last_error_msg(),
+                'response_head' => substr($response, 0, 1000),
+                'response_tail' => substr($response, -500),
+                'response_len'  => strlen($response),
             ]);
             return;
         }
