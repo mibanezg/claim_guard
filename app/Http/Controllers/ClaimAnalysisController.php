@@ -59,20 +59,33 @@ class ClaimAnalysisController extends Controller
                 ->with('error', 'Ya hay un análisis en proceso para este contrato.');
         }
 
-        $analysis = ContractAiAnalysis::create([
-            'contract_id'  => $contract->id,
-            'status'       => 'pending',
-            'requested_by' => Auth::id(),
-        ]);
+        try {
+            $analysis = ContractAiAnalysis::create([
+                'contract_id'  => $contract->id,
+                'status'       => 'pending',
+                'requested_by' => Auth::id(),
+            ]);
 
-        $tenant = Tenant::current();
-        if ($tenant) {
-            AnalyzeClaimExposureJob::dispatch($analysis->id, $tenant->id);
+            $tenant = Tenant::current();
+            if ($tenant) {
+                AnalyzeClaimExposureJob::dispatch($analysis->id, $tenant->id);
+            }
+
+            return redirect()
+                ->route('analysis.index', ['contract_id' => $contract->id])
+                ->with('success', 'Análisis iniciado. La IA está procesando el contrato, esto puede tomar un minuto.');
+
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('ClaimAnalysisController::generate error', [
+                'contract_id' => $contract->id,
+                'error'       => $e->getMessage(),
+                'trace'       => $e->getTraceAsString(),
+            ]);
+
+            return redirect()
+                ->route('analysis.index', ['contract_id' => $contract->id])
+                ->with('error', 'Error al iniciar el análisis: ' . $e->getMessage());
         }
-
-        return redirect()
-            ->route('analysis.index', ['contract_id' => $contract->id])
-            ->with('success', 'Análisis iniciado. La IA está procesando el contrato, esto puede tomar un minuto.');
     }
 
     private function formatAnalysis(ContractAiAnalysis $analysis): array
