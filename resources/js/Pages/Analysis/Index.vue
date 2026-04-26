@@ -1,7 +1,7 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
-import { computed, watch, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({
     contracts:        { type: Object,  required: true },
@@ -24,23 +24,29 @@ function requestAnalysis() {
     router.post(route('analysis.generate', { contract: props.selectedContract.id }))
 }
 
-// Cuando isProcessing pasa a false (job terminó), para el polling
-watch(() => props.isProcessing, (processing) => {
-    if (!processing) stopPolling()
-})
-
 onMounted(() => {
     if (props.isProcessing) startPolling()
 })
 
-onUnmounted(() => {
-    stopPolling()
-})
+onUnmounted(stopPolling)
 
 function startPolling() {
     stopPolling()
-    pollInterval = setInterval(() => {
-        router.reload({ preserveScroll: true })
+    pollInterval = setInterval(async () => {
+        if (!props.selectedContract?.id) return
+        try {
+            const res = await fetch(route('analysis.status', { contract: props.selectedContract.id }), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            })
+            if (!res.ok) return
+            const { isProcessing } = await res.json()
+            if (!isProcessing) {
+                stopPolling()
+                router.visit(window.location.href, { preserveScroll: true, replace: true })
+            }
+        } catch {
+            // ignorar errores de red transitorios
+        }
     }, 5000)
 }
 

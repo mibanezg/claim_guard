@@ -178,6 +178,7 @@ Route::middleware(['tenant', 'tenant.active'])->group(function () {
         // Análisis IA de exposición al claim
         Route::get('analysis', [ClaimAnalysisController::class, 'index'])->name('analysis.index');
         Route::post('contracts/{contract}/analysis/generate', [ClaimAnalysisController::class, 'generate'])->name('analysis.generate');
+        Route::get('contracts/{contract}/analysis/status', [ClaimAnalysisController::class, 'status'])->name('analysis.status');
 
         // Indicador de riesgo de Claim
         Route::get('risk', [RiskController::class, 'index'])->name('risk.index');

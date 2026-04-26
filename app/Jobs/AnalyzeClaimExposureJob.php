@@ -48,7 +48,7 @@ class AnalyzeClaimExposureJob implements ShouldQueue
         $contract = $analysis->contract()->with([
             'mandante',
             'contractor',
-            'events'       => fn ($q) => $q->orderByDesc('occurred_at')->take(40),
+            'events'       => fn ($q) => $q->with('costItems')->orderByDesc('occurred_at')->take(40),
             'letters'      => fn ($q) => $q->orderByDesc('issued_at')->take(30),
             'changeOrders' => fn ($q) => $q->orderByDesc('created_at')->take(20),
             'latestRiskScore',
@@ -63,14 +63,21 @@ class AnalyzeClaimExposureJob implements ShouldQueue
         $missingDays = $dailyReportService->missingDays($contract);
 
         // Construir secciones del contexto
-        $eventsText = $contract->events->map(fn ($e) =>
-            "[{$e->occurred_at->format('d/m/Y')}] {$e->type_label} — Responsable: {$e->party_label} — Estado: {$e->resolution_label}" .
-            ($e->cost_impact > 0 ? " — Impacto costo: $" . number_format($e->cost_impact / 100, 0, ',', '.') : '') .
-            ($e->schedule_impact_days > 0 ? " — Impacto plazo: {$e->schedule_impact_days} días" : '') .
-            ($e->is_notice_overdue ? " ⚠️ AVISO VENCIDO" : '') .
-            ($e->notice_days_remaining !== null && $e->notice_days_remaining <= 3 ? " ⚠️ AVISO VENCE EN {$e->notice_days_remaining} DÍA(S)" : '') .
-            "\n  Descripción: " . substr($e->description, 0, 200)
-        )->implode("\n");
+        $eventsText = $contract->events->map(function ($e) {
+            $quantumSum = $e->costItems->sum('amount');
+            $line = "[{$e->occurred_at->format('d/m/Y')}] {$e->type_label} — Responsable: {$e->party_label} — Estado: {$e->resolution_label}";
+            if ($quantumSum > 0) {
+                $line .= " — Quantum (valor documentado): $" . number_format($quantumSum / 100, 0, ',', '.');
+            } elseif ($e->cost_impact > 0) {
+                $line .= " — Impacto estimado: $" . number_format($e->cost_impact / 100, 0, ',', '.');
+            }
+            if ($e->schedule_impact_days > 0) $line .= " — Impacto plazo: {$e->schedule_impact_days} días";
+            if ($e->is_notice_overdue)         $line .= " ⚠️ AVISO VENCIDO";
+            if ($e->notice_days_remaining !== null && $e->notice_days_remaining <= 3)
+                $line .= " ⚠️ AVISO VENCE EN {$e->notice_days_remaining} DÍA(S)";
+            $line .= "\n  Descripción: " . substr($e->description, 0, 200);
+            return $line;
+        })->implode("\n");
 
         $lettersText = $contract->letters->map(fn ($l) =>
             '[' . ($l->issued_at?->format('d/m/Y') ?? 'sin fecha') . "] {$l->letter_number} — {$l->type_label} — Estado: {$l->status_label}" .

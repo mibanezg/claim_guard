@@ -6,6 +6,7 @@ use App\Http\Resources\ContractResource;
 use App\Jobs\AnalyzeClaimExposureJob;
 use App\Models\Contract;
 use App\Models\ContractAiAnalysis;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -86,6 +87,14 @@ class ClaimAnalysisController extends Controller
                 ->route('analysis.index', ['contract_id' => $contract->id])
                 ->with('error', 'Error al iniciar el análisis: ' . $e->getMessage());
         }
+    }
+
+    public function status(Contract $contract): JsonResponse
+    {
+        $analysis = ContractAiAnalysis::where('contract_id', $contract->id)->latest()->first();
+        return response()->json([
+            'isProcessing' => $analysis?->isProcessing() ?? false,
+        ]);
     }
 
     private function formatAnalysis(ContractAiAnalysis $analysis): array
