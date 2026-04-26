@@ -257,27 +257,66 @@ USER;
 
     private function parseAiJson(string $raw): ?array
     {
-        // 1. Quitar fences markdown agresivamente (```json, ```)
+        // 1. Quitar fences markdown agresivamente
         $text = preg_replace('/```json\s*/i', '', $raw);
         $text = preg_replace('/```/', '', $text);
         $text = trim($text);
 
-        // 2. Extraer bloque { ... } (greedy para capturar el objeto completo)
+        // 2. Extraer bloque { ... }
         preg_match('/\{.*\}/s', $text, $m);
         $json = !empty($m[0]) ? $m[0] : $text;
 
-        // 3. Reparar newlines reales dentro de strings JSON
-        $json = preg_replace_callback(
-            '/"((?:[^"\\\\]|\\\\.)*)"/s',
-            function ($match) {
-                $inner = str_replace(["\r\n", "\r", "\n"], ' ', $match[1]);
-                return '"' . $inner . '"';
-            },
-            $json
-        );
-
+        // 3. Intentar parsear directamente
         $data = json_decode($json, true);
+        if (is_array($data)) return $data;
+
+        // 4. Reparar: newlines reales + comillas sin escapar dentro de strings
+        $repaired = $this->repairJsonString($json);
+        $data = json_decode($repaired, true);
         return is_array($data) ? $data : null;
+    }
+
+    private function repairJsonString(string $json): string
+    {
+        $out    = '';
+        $inStr  = false;
+        $esc    = false;
+        $len    = strlen($json);
+
+        for ($i = 0; $i < $len; $i++) {
+            $c = $json[$i];
+
+            if ($esc) { $out .= $c; $esc = false; continue; }
+            if ($c === '\\') { $out .= $c; $esc = true; continue; }
+
+            if ($c === '"') {
+                if (!$inStr) {
+                    $inStr = true;
+                    $out .= $c;
+                } else {
+                    // ¿Cierre de string o comilla literal dentro del texto?
+                    $rest = ltrim(substr($json, $i + 1));
+                    $next = $rest !== '' ? $rest[0] : '';
+                    if ($next === '' || in_array($next, [':', ',', '}', ']'])) {
+                        $inStr = false;
+                        $out .= $c;        // es el cierre legítimo
+                    } else {
+                        $out .= '\\"';     // comilla literal — escapar
+                    }
+                }
+                continue;
+            }
+
+            // Newline real dentro de string → espacio
+            if ($inStr && ($c === "\n" || $c === "\r")) {
+                $out .= ' ';
+                continue;
+            }
+
+            $out .= $c;
+        }
+
+        return $out;
     }
 
     public function failed(\Throwable $e): void
