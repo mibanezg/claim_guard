@@ -13,6 +13,14 @@ const page  = usePage()
 const flash = computed(() => page.props.flash)
 const { confirmDelete } = useConfirm()
 
+const can = computed(() => {
+    const perms = page.props.auth?.user?.permissions ?? []
+    return {
+        create: perms.includes('contracts.create'),
+        edit:   perms.includes('contracts.edit'),
+    }
+})
+
 const search       = ref(props.filters?.search ?? '')
 const statusFilter = ref(props.filters?.status ?? '')
 const typeFilter   = ref(props.filters?.type   ?? '')
@@ -66,7 +74,7 @@ function fmt(amount, currency) {
                     Gestión contractual del espacio de trabajo
                 </p>
             </div>
-            <Link
+            <Link v-if="can.create"
                 :href="route('contracts.create')"
                 class="flex items-center gap-2 px-6 py-3 rounded-full font-bold text-sm transition-all active:scale-95"
                 style="background: var(--gradient-primary); color: var(--color-on-primary); box-shadow: var(--shadow-primary);"
@@ -184,7 +192,7 @@ function fmt(amount, currency) {
                                     >
                                         <span class="material-symbols-outlined" style="font-size: 18px;">visibility</span>
                                     </Link>
-                                    <Link
+                                    <Link v-if="can.edit"
                                         :href="route('contracts.edit', c.id)"
                                         class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
                                         style="color: var(--color-text-secondary);"
@@ -194,7 +202,7 @@ function fmt(amount, currency) {
                                     >
                                         <span class="material-symbols-outlined" style="font-size: 18px;">edit</span>
                                     </Link>
-                                    <button
+                                    <button v-if="can.edit"
                                         class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
                                         style="color: var(--color-text-secondary); background: none; border: none; cursor: pointer;"
                                         :onMouseover="e => e.currentTarget.style.color = 'var(--color-error)'"

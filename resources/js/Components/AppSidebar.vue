@@ -123,7 +123,7 @@ watch(() => page.url, scrollToActive)
 
         <!-- Sección inferior -->
         <div class="pt-4 flex flex-col space-y-1 shrink-0" style="border-top: 1px solid var(--color-border-variant);">
-            <button
+            <button v-if="hasPermission('contracts.create')"
                 class="w-full mb-4 py-3 px-4 rounded-full font-bold flex items-center justify-center gap-2 active:scale-95 transition-all"
                 style="background: var(--gradient-primary); color: var(--color-on-primary); box-shadow: var(--shadow-primary); font-family: var(--font-body);"
             >
