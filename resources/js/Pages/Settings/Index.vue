@@ -25,15 +25,20 @@ const props = defineProps({
 const page      = usePage()
 const flashData = computed(() => page.props.flash ?? props.flash)
 
+const isAdmin = computed(() =>
+    (page.props.auth?.user?.permissions ?? []).includes('settings.integrations')
+)
+
 // ── Tab activo ────────────────────────────────────────────────────────────────
 const activeTab = ref('colors')
-const tabs = [
-    { key: 'colors',      label: 'Colores',            icon: 'palette' },
-    { key: 'thresholds',  label: 'Umbrales de riesgo', icon: 'tune' },
-    { key: 'ai',          label: 'Inteligencia Artificial', icon: 'smart_toy' },
-    { key: 'storage',     label: 'Almacenamiento',     icon: 'folder_open' },
-    { key: 'integration', label: 'Microsoft 365',      icon: 'cloud' },
+const allTabs = [
+    { key: 'colors',      label: 'Colores',                 icon: 'palette',     adminOnly: false },
+    { key: 'thresholds',  label: 'Umbrales de riesgo',      icon: 'tune',        adminOnly: true  },
+    { key: 'ai',          label: 'Inteligencia Artificial',  icon: 'smart_toy',   adminOnly: true  },
+    { key: 'storage',     label: 'Almacenamiento',          icon: 'folder_open', adminOnly: true  },
+    { key: 'integration', label: 'Microsoft 365',           icon: 'cloud',       adminOnly: true  },
 ]
+const tabs = computed(() => allTabs.filter(t => !t.adminOnly || isAdmin.value))
 
 // ── Formulario de colores ────────────────────────────────────────────────────
 const colorForm = useForm({

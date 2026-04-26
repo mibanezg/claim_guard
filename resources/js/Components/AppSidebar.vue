@@ -12,25 +12,32 @@ const user   = computed(() => page.props.auth.user)
 const tenant = computed(() => page.props.tenant)
 const navEl  = ref(null)
 
-const navItems = [
+const userPerms = computed(() => user.value?.permissions ?? [])
+const hasPermission = (perm) => userPerms.value.includes(perm)
+
+const allNavItems = [
     { label: 'Dashboard',          icon: 'dashboard',      routeName: 'dashboard' },
-    { label: 'Contratos',          icon: 'description',    routeName: 'contracts.index',  activePattern: 'contracts.*' },
+    { label: 'Contratos',          icon: 'description',    routeName: 'contracts.index',       activePattern: 'contracts.*' },
     { label: 'Programa',           icon: 'calendar_month', routeName: 'milestones.index' },
     { label: 'Eventos',            icon: 'event_note',     routeName: 'events.index' },
     { label: 'Diario de Obra',     icon: 'book',           routeName: 'daily-reports.index' },
     { label: 'Cartas',             icon: 'mail',           routeName: 'letters.index' },
     { label: 'Órd. de Cambio',     icon: 'swap_horiz',     routeName: 'change-orders.index' },
-    { label: 'Riesgo de Claim',    icon: 'shield',         routeName: 'risk.index' },
-    { label: 'Quantum',             icon: 'calculate',      routeName: 'quantum.index' },
+    { label: 'Riesgo de Claim',    icon: 'shield',         routeName: 'risk.index',            permission: 'risk.view' },
+    { label: 'Quantum',            icon: 'calculate',      routeName: 'quantum.index' },
     { label: 'Análisis CPM',       icon: 'account_tree',   routeName: 'delay-analysis.index' },
     { label: 'Reserva Derechos',   icon: 'policy',         routeName: 'rights.index' },
     { label: 'Análisis IA',        icon: 'psychology',     routeName: 'analysis.index' },
-    { label: 'Expediente',         icon: 'folder_special', routeName: 'expediente.index' },
+    { label: 'Expediente',         icon: 'folder_special', routeName: 'expediente.index',      permission: 'expediente.generate' },
     { label: 'Documentos',         icon: 'folder',         routeName: 'documents.index' },
     { label: 'Reportes',           icon: 'bar_chart',      routeName: 'reports.index' },
     { label: 'Empresas',           icon: 'business',       routeName: 'companies.index' },
-    { label: 'Usuarios',           icon: 'group',          routeName: 'users.index' },
+    { label: 'Usuarios',           icon: 'group',          routeName: 'users.index',           permission: 'settings.tenant' },
 ]
+
+const navItems = computed(() =>
+    allNavItems.filter(item => !item.permission || hasPermission(item.permission))
+)
 
 function isActive(item) {
     if (item.activePattern) return route().current(item.activePattern)
@@ -125,7 +132,7 @@ watch(() => page.url, scrollToActive)
             </button>
 
             <Link
-                v-if="route().has('settings.tenant')"
+                v-if="route().has('settings.tenant') && hasPermission('settings.tenant')"
                 :href="route('settings.tenant')"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition-all"
                 style="color: var(--color-text-secondary);"

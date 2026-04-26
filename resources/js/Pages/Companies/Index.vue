@@ -14,6 +14,14 @@ const page  = usePage()
 const flash = computed(() => page.props.flash)
 const { confirmDelete } = useConfirm()
 
+const can = computed(() => {
+    const perms = page.props.auth?.user?.permissions ?? []
+    return {
+        create: perms.includes('contracts.create'),
+        edit:   perms.includes('contracts.edit'),
+    }
+})
+
 const search     = ref(props.filters?.search ?? '')
 const typeFilter = ref(props.filters?.type   ?? '')
 const showModal  = ref(false)
@@ -75,7 +83,7 @@ const typeColors = {
                     Mandantes y contratistas registrados en este espacio de trabajo
                 </p>
             </div>
-            <button
+            <button v-if="can.create"
                 class="flex items-center gap-2 px-6 py-3 rounded-full font-bold text-sm transition-all active:scale-95"
                 style="background: var(--gradient-primary); color: var(--color-on-primary); box-shadow: var(--shadow-primary); border: none; cursor: pointer;"
                 @click="openCreate"
@@ -171,7 +179,7 @@ const typeColors = {
                                 <span v-if="!company.contact_name && !company.contact_email" style="color: var(--color-text-muted);">—</span>
                             </td>
                             <td class="px-6 py-5 text-right">
-                                <div class="flex items-center justify-end gap-2">
+                                <div v-if="can.edit" class="flex items-center justify-end gap-2">
                                     <button
                                         class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
                                         style="color: var(--color-text-secondary); background: none; border: none; cursor: pointer;"

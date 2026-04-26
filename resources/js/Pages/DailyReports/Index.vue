@@ -19,6 +19,11 @@ const page  = usePage()
 const flash = computed(() => page.props.flash)
 const { confirmDelete } = useConfirm()
 
+const can = computed(() => {
+    const perms = page.props.auth?.user?.permissions ?? []
+    return { create: perms.includes('contracts.edit') }
+})
+
 const monthFilter = ref(props.filters?.month ?? '')
 
 function selectContract(id) {
@@ -91,7 +96,7 @@ const recentMissing = computed(() => props.missingDays.slice(-7).reverse())
                     style="font-family: var(--font-headline); color: var(--color-text-primary);">Diario de Obra</h2>
                 <p class="text-sm" style="color: var(--color-text-secondary);">Registro contemporáneo diario — evidencia clave para el expediente de claim</p>
             </div>
-            <button v-if="selectedContract" @click="goCreate"
+            <button v-if="selectedContract && can.create" @click="goCreate"
                     class="flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm transition-all active:scale-95"
                     style="background: var(--gradient-primary); color: var(--color-on-primary); box-shadow: var(--shadow-primary); border: none; cursor: pointer;">
                 <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
@@ -305,7 +310,7 @@ const recentMissing = computed(() => props.missingDays.slice(-7).reverse())
                             <span class="material-symbols-outlined mb-3" style="font-size: 48px; color: var(--color-text-muted);">book</span>
                             <p class="font-semibold" style="color: var(--color-text-secondary);">Sin reportes registrados</p>
                             <p class="text-sm mt-1" style="color: var(--color-text-muted);">Los diarios de obra son evidencia contemporánea clave</p>
-                            <button @click="goCreate" class="mt-4 px-5 py-2.5 rounded-full text-sm font-bold"
+                            <button v-if="can.create" @click="goCreate" class="mt-4 px-5 py-2.5 rounded-full text-sm font-bold"
                                     style="background: var(--gradient-primary); color: var(--color-on-primary); border: none; cursor: pointer;">
                                 Registrar primer día
                             </button>
