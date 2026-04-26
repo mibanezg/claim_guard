@@ -221,45 +221,8 @@ USER;
             return;
         }
 
-        // Extraer JSON — la IA puede envolver en ```json``` o meter newlines en strings
-        $data = null;
-
-        // Paso 1: eliminar markdown fences si existen
-        $stripped = trim(preg_replace('/^```(?:json)?[ \t]*/m', '',
-                         preg_replace('/^```[ \t]*$/m', '', $response)));
-
-        // Paso 2: parsear directo (respuesta limpia)
-        $data = json_decode($stripped, true) ?: null;
-
-        // Paso 3: extraer bloque { ... } del texto limpio
-        if (!$data) {
-            preg_match('/\{.*\}/s', $stripped, $m);
-            if (!empty($m[0])) $data = json_decode($m[0], true) ?: null;
-        }
-
-        // Paso 4: reparar newlines reales dentro de strings JSON
-        if (!$data) {
-            $candidate = !empty($m[0]) ? $m[0] : $stripped;
-            $fixed = preg_replace_callback(
-                '/"((?:[^"\\\\]|\\\\.)*)"/s',
-                fn($match) => '"' . str_replace(["\r\n", "\r", "\n"], '\\n', $match[1]) . '"',
-                $candidate
-            );
-            $data = json_decode($fixed, true) ?: null;
-        }
-
-        // Paso 5: fallback sobre respuesta original con misma reparación
-        if (!$data) {
-            preg_match('/\{.*\}/s', $response, $m);
-            if (!empty($m[0])) {
-                $fixed = preg_replace_callback(
-                    '/"((?:[^"\\\\]|\\\\.)*)"/s',
-                    fn($match) => '"' . str_replace(["\r\n", "\r", "\n"], '\\n', $match[1]) . '"',
-                    $m[0]
-                );
-                $data = json_decode($fixed, true) ?: null;
-            }
-        }
+        // Extraer y parsear JSON de la respuesta de la IA
+        $data = $this->parseAiJson($response);
 
         if (!is_array($data)) {
             $analysis->update([
@@ -290,6 +253,31 @@ USER;
         ]);
 
         Log::info('AnalyzeClaimExposureJob: análisis completado', ['analysis_id' => $this->analysisId]);
+    }
+
+    private function parseAiJson(string $raw): ?array
+    {
+        // 1. Quitar fences markdown agresivamente (```json, ```)
+        $text = preg_replace('/```json\s*/i', '', $raw);
+        $text = preg_replace('/```/', '', $text);
+        $text = trim($text);
+
+        // 2. Extraer bloque { ... } (greedy para capturar el objeto completo)
+        preg_match('/\{.*\}/s', $text, $m);
+        $json = !empty($m[0]) ? $m[0] : $text;
+
+        // 3. Reparar newlines reales dentro de strings JSON
+        $json = preg_replace_callback(
+            '/"((?:[^"\\\\]|\\\\.)*)"/s',
+            function ($match) {
+                $inner = str_replace(["\r\n", "\r", "\n"], ' ', $match[1]);
+                return '"' . $inner . '"';
+            },
+            $json
+        );
+
+        $data = json_decode($json, true);
+        return is_array($data) ? $data : null;
     }
 
     public function failed(\Throwable $e): void
