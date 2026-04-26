@@ -132,7 +132,9 @@ Tu tarea es analizar la situación contractual completa y entregar un dictamen e
 la exposición al claim. No das consejos genéricos. Cada observación debe hacer referencia a datos
 concretos del contrato: fechas específicas, montos, eventos o cartas mencionados en el contexto.
 
-Respondes en español formal chileno. Responde ÚNICAMENTE con un objeto JSON válido, sin texto previo ni posterior.
+Respondes en español formal chileno.
+IMPORTANTE: Responde ÚNICAMENTE con el objeto JSON, sin ningún texto antes ni después.
+NO uses bloques de código markdown (no uses ```json ni ```). Solo el JSON puro.
 SYSTEM;
 
         $user = <<<USER
@@ -216,29 +218,32 @@ USER;
             return;
         }
 
-        // Extraer JSON de la respuesta (maneja markdown code fences y texto extra)
+        // Extraer JSON — la IA puede envolver en ```json ... ``` aunque se le pida que no
         $data = null;
 
-        // Intento 1: respuesta es JSON puro
-        $data = json_decode($response, true);
+        // Paso 1: eliminar markdown fences si existen
+        $stripped = trim(preg_replace('/^```(?:json)?[ \t]*/m', '',
+                         preg_replace('/^```[ \t]*$/m', '', $response)));
 
-        // Intento 2: JSON dentro de ```json ... ```
-        if (!is_array($data)) {
-            preg_match('/```(?:json)?\s*(\{.*?\})\s*```/s', $response, $m);
-            if (!empty($m[1])) $data = json_decode($m[1], true);
+        // Paso 2: parsear directo (respuesta limpia)
+        $data = json_decode($stripped, true) ?: null;
+
+        // Paso 3: extraer bloque { ... } del texto limpio
+        if (!$data) {
+            preg_match('/\{.*\}/s', $stripped, $m);
+            if (!empty($m[0])) $data = json_decode($m[0], true) ?: null;
         }
 
-        // Intento 3: primer bloque { ... } del texto
-        if (!is_array($data)) {
+        // Paso 4: fallback sobre respuesta original
+        if (!$data) {
             preg_match('/\{.*\}/s', $response, $m);
-            if (!empty($m[0])) $data = json_decode($m[0], true);
+            if (!empty($m[0])) $data = json_decode($m[0], true) ?: null;
         }
 
         if (!is_array($data)) {
-            $preview = substr($response, 0, 300);
             $analysis->update([
                 'status'        => 'failed',
-                'error_message' => 'JSON no parseable. Error: ' . json_last_error_msg() . ' | Respuesta: ' . $preview,
+                'error_message' => 'JSON no parseable. Error: ' . json_last_error_msg() . ' | Respuesta: ' . substr($response, 0, 300),
             ]);
             Log::warning('AnalyzeClaimExposureJob: JSON no parseable', [
                 'analysis_id'  => $this->analysisId,
