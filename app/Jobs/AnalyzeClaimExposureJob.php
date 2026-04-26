@@ -73,7 +73,7 @@ class AnalyzeClaimExposureJob implements ShouldQueue
         )->implode("\n");
 
         $lettersText = $contract->letters->map(fn ($l) =>
-            "[{$l->issued_at?->format('d/m/Y') ?? 'sin fecha'}] {$l->letter_number} — {$l->type_label} — Estado: {$l->status_label}" .
+            '[' . ($l->issued_at?->format('d/m/Y') ?? 'sin fecha') . "] {$l->letter_number} — {$l->type_label} — Estado: {$l->status_label}" .
             ($l->response_deadline && $l->status === 'vencida' ? " ⚠️ VENCIDA sin respuesta" : '') .
             "\n  Asunto: {$l->subject}"
         )->implode("\n") ?: 'Sin correspondencia registrada.';
@@ -105,8 +105,9 @@ class AnalyzeClaimExposureJob implements ShouldQueue
             $corpusContext = ContractPdfService::forPrompt($contract->contract_text, 10_000);
         }
 
-        $montoOriginal = number_format(($contract->original_amount ?? 0) / 100, 0, ',', '.');
-        $montoVigente  = number_format(($contract->current_amount  ?? 0) / 100, 0, ',', '.');
+        $montoOriginal  = number_format(($contract->original_amount ?? 0) / 100, 0, ',', '.');
+        $montoVigente   = number_format(($contract->current_amount  ?? 0) / 100, 0, ',', '.');
+        $projectedEnd   = $contract->projected_end_date?->format('d/m/Y') ?? 'No definido';
 
         $system = <<<SYSTEM
 Eres un consultor experto en claims contractuales de construcción y minería bajo legislación chilena,
@@ -126,7 +127,7 @@ Tipo: {$contract->type} | Moneda: {$contract->currency}
 Monto original: \${$montoOriginal} | Monto vigente: \${$montoVigente}
 Inicio contractual: {$contract->contractual_start_date?->format('d/m/Y')}
 Fin contractual: {$contract->contractual_end_date?->format('d/m/Y')}
-Fin proyectado: {$contract->projected_end_date?->format('d/m/Y') ?? 'No definido'}
+Fin proyectado: {$projectedEnd}
 Días hábiles para notificar: {$contract->notification_days ?? 'No definido'}
 Estado actual: {$contract->status}
 
