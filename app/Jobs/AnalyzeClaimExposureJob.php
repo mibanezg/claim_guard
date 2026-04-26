@@ -111,6 +111,11 @@ class AnalyzeClaimExposureJob implements ShouldQueue
         $notificationDays = $contract->notification_days ?? 'No definido';
         $mandanteName     = $contract->mandante?->name ?? 'No registrado';
         $contractorName   = $contract->contractor?->name ?? 'No registrado';
+        $startDate        = $contract->contractual_start_date?->format('d/m/Y') ?? 'No definido';
+        $endDate          = $contract->contractual_end_date?->format('d/m/Y') ?? 'No definido';
+        $corpusSection    = $corpusContext
+            ? "EXTRACTO DEL CUERPO CONTRACTUAL:\n---\n{$corpusContext}\n---\n\n"
+            : '';
 
         $system = <<<SYSTEM
 Eres un consultor experto en claims contractuales de construcción y minería bajo legislación chilena,
@@ -128,8 +133,8 @@ DATOS DEL CONTRATO:
 Contrato: {$contract->number} — {$contract->name}
 Tipo: {$contract->type} | Moneda: {$contract->currency}
 Monto original: \${$montoOriginal} | Monto vigente: \${$montoVigente}
-Inicio contractual: {$contract->contractual_start_date?->format('d/m/Y')}
-Fin contractual: {$contract->contractual_end_date?->format('d/m/Y')}
+Inicio contractual: {$startDate}
+Fin contractual: {$endDate}
 Fin proyectado: {$projectedEnd}
 Días hábiles para notificar: {$notificationDays}
 Estado actual: {$contract->status}
@@ -141,7 +146,7 @@ Contratista: {$contractorName}
 CLÁUSULAS CLAVE REGISTRADAS:
 {$clausesText}
 
-{$corpusContext ? "EXTRACTO DEL CUERPO CONTRACTUAL:\n---\n{$corpusContext}\n---\n\n" : ''}
+{$corpusSection}
 
 EVENTOS CONTRACTUALES ({$contract->events->count()} registrados, mostrando últimos 40):
 {$eventsText}
