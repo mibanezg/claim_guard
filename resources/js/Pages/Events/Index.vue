@@ -22,6 +22,11 @@ const page  = usePage()
 const flash = computed(() => page.props.flash)
 const { confirmDelete } = useConfirm()
 
+const can = computed(() => {
+    const perms = page.props.auth?.user?.permissions ?? []
+    return { create: perms.includes('events.create') }
+})
+
 const showModal  = ref(false)
 const editTarget = ref(null)
 
@@ -123,7 +128,7 @@ const stats = computed(() => {
                     style="font-family: var(--font-headline); color: var(--color-text-primary);">Eventos Contractuales</h2>
                 <p class="text-sm" style="color: var(--color-text-secondary);">Registro de hechos relevantes durante la ejecución</p>
             </div>
-            <button v-if="selectedContract" @click="openCreate"
+            <button v-if="selectedContract && can.create" @click="openCreate"
                     class="flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm transition-all active:scale-95"
                     style="background: var(--gradient-primary); color: var(--color-on-primary); box-shadow: var(--shadow-primary); border: none; cursor: pointer;">
                 <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
@@ -342,7 +347,7 @@ const stats = computed(() => {
 
                                         <!-- Acciones -->
                                         <td class="px-5 py-4 text-right">
-                                            <div class="flex items-center justify-end gap-1">
+                                            <div v-if="can.create" class="flex items-center justify-end gap-1">
                                                 <button @click="openEdit(e)"
                                                         class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
                                                         style="color: var(--color-text-secondary); background: none; border: none; cursor: pointer;"

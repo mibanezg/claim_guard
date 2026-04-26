@@ -17,6 +17,11 @@ const page  = usePage()
 const flash = computed(() => page.props.flash)
 const { confirmDelete } = useConfirm()
 
+const can = computed(() => {
+    const perms = page.props.auth?.user?.permissions ?? []
+    return { upload: perms.includes('documents.upload') }
+})
+
 const selectedContractId = ref(props.selectedContract?.id ?? null)
 
 function selectContract(id) {
@@ -168,7 +173,7 @@ function fileIcon(mimeType) {
                                 {{ selectedContract.name }} — {{ selectedContract.number }}
                             </p>
                         </div>
-                        <button @click="openUpload"
+                        <button v-if="can.upload" @click="openUpload"
                                 class="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition-all active:scale-95"
                                 style="background: var(--gradient-primary); color: var(--color-on-primary); box-shadow: var(--shadow-primary); border: none; cursor: pointer;">
                             <span class="material-symbols-outlined" style="font-size: 18px;">upload_file</span>
@@ -201,7 +206,7 @@ function fileIcon(mimeType) {
                         <div v-if="docs.length === 0" class="py-16 flex flex-col items-center gap-3">
                             <span class="material-symbols-outlined" style="font-size: 48px; color: var(--color-text-muted);">folder_open</span>
                             <p class="text-sm font-medium" style="color: var(--color-text-muted);">No hay documentos registrados</p>
-                            <button @click="openUpload"
+                            <button v-if="can.upload" @click="openUpload"
                                     class="mt-2 px-5 py-2 rounded-full text-sm font-bold"
                                     style="background: var(--gradient-primary); color: var(--color-on-primary); border: none; cursor: pointer;">
                                 Subir primer documento
@@ -291,7 +296,7 @@ function fileIcon(mimeType) {
 
                                     <!-- Acciones -->
                                     <td class="px-4 py-3">
-                                        <button @click="deleteDoc(doc)"
+                                        <button v-if="can.upload" @click="deleteDoc(doc)"
                                                 title="Eliminar"
                                                 class="w-8 h-8 flex items-center justify-center rounded-lg transition-all"
                                                 style="color: var(--color-text-muted); background: none; border: none; cursor: pointer;"

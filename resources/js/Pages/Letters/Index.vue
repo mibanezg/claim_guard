@@ -22,6 +22,14 @@ const page = usePage()
 const flash = computed(() => page.props.flash)
 const { confirmDelete } = useConfirm()
 
+const can = computed(() => {
+    const perms = page.props.auth?.user?.permissions ?? []
+    return {
+        create: perms.includes('letters.create'),
+        emit:   perms.includes('letters.emit'),
+    }
+})
+
 // Contrato seleccionado
 const selectedContractId = ref(props.selectedContract?.id ?? null)
 
@@ -215,7 +223,7 @@ function requestDraft() {
                                 {{ selectedContract.name }} — {{ selectedContract.number }}
                             </p>
                         </div>
-                        <button @click="openCreate"
+                        <button v-if="can.create" @click="openCreate"
                                 class="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition-all active:scale-95"
                                 style="background: var(--gradient-primary); color: var(--color-on-primary); box-shadow: var(--shadow-primary); border: none; cursor: pointer;">
                             <span class="material-symbols-outlined" style="font-size: 18px;">add</span>
@@ -253,7 +261,7 @@ function requestDraft() {
                         <div v-if="letters.length === 0" class="py-16 flex flex-col items-center gap-3">
                             <span class="material-symbols-outlined" style="font-size: 48px; color: var(--color-text-muted);">mail</span>
                             <p class="text-sm font-medium" style="color: var(--color-text-muted);">No hay cartas registradas</p>
-                            <button @click="openCreate"
+                            <button v-if="can.create" @click="openCreate"
                                     class="mt-2 px-5 py-2 rounded-full text-sm font-bold"
                                     style="background: var(--gradient-primary); color: var(--color-on-primary); border: none; cursor: pointer;">
                                 Registrar primera carta
@@ -333,8 +341,8 @@ function requestDraft() {
 
                                     <!-- Acciones -->
                                     <td class="px-5 py-3" style="white-space: nowrap; width: 120px;">
-                                        <div class="flex items-center gap-1">
-                                            <!-- Asistente IA (disponible para todas las cartas) -->
+                                        <div v-if="can.create" class="flex items-center gap-1">
+                                            <!-- Asistente IA -->
                                             <button @click="ai_available ? openDraftPanel(letter) : null"
                                                     :title="ai_available ? 'Asistente IA — generar respuesta' : 'IA no configurada'"
                                                     class="w-8 h-8 flex items-center justify-center rounded-lg transition-all"
