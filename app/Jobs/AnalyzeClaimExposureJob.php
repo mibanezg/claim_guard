@@ -105,9 +105,12 @@ class AnalyzeClaimExposureJob implements ShouldQueue
             $corpusContext = ContractPdfService::forPrompt($contract->contract_text, 10_000);
         }
 
-        $montoOriginal  = number_format(($contract->original_amount ?? 0) / 100, 0, ',', '.');
-        $montoVigente   = number_format(($contract->current_amount  ?? 0) / 100, 0, ',', '.');
-        $projectedEnd   = $contract->projected_end_date?->format('d/m/Y') ?? 'No definido';
+        $montoOriginal    = number_format(($contract->original_amount ?? 0) / 100, 0, ',', '.');
+        $montoVigente     = number_format(($contract->current_amount  ?? 0) / 100, 0, ',', '.');
+        $projectedEnd     = $contract->projected_end_date?->format('d/m/Y') ?? 'No definido';
+        $notificationDays = $contract->notification_days ?? 'No definido';
+        $mandanteName     = $contract->mandante?->name ?? 'No registrado';
+        $contractorName   = $contract->contractor?->name ?? 'No registrado';
 
         $system = <<<SYSTEM
 Eres un consultor experto en claims contractuales de construcción y minería bajo legislación chilena,
@@ -128,12 +131,12 @@ Monto original: \${$montoOriginal} | Monto vigente: \${$montoVigente}
 Inicio contractual: {$contract->contractual_start_date?->format('d/m/Y')}
 Fin contractual: {$contract->contractual_end_date?->format('d/m/Y')}
 Fin proyectado: {$projectedEnd}
-Días hábiles para notificar: {$contract->notification_days ?? 'No definido'}
+Días hábiles para notificar: {$notificationDays}
 Estado actual: {$contract->status}
 
 PARTES:
-Mandante: {$contract->mandante?->name ?? 'No registrado'}
-Contratista: {$contract->contractor?->name ?? 'No registrado'}
+Mandante: {$mandanteName}
+Contratista: {$contractorName}
 
 CLÁUSULAS CLAVE REGISTRADAS:
 {$clausesText}
