@@ -1,7 +1,7 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 const props = defineProps({
     contracts:        { type: Object,  required: true },
@@ -15,6 +15,9 @@ const page  = usePage()
 const flash = computed(() => page.props.flash)
 
 let pollInterval = null
+let pollCount    = 0
+const POLL_LIMIT = 36  // 36 × 5s = 3 minutos máximo
+const pollTimedOut = ref(false)
 
 function selectContract(id) {
     router.get(route('analysis.index'), { contract_id: id }, { preserveState: false })
@@ -22,6 +25,12 @@ function selectContract(id) {
 
 function requestAnalysis() {
     router.post(route('analysis.generate', { contract: props.selectedContract.id }))
+}
+
+function manualReload() {
+    pollTimedOut.value = false
+    pollCount = 0
+    router.visit(window.location.href, { preserveScroll: true, replace: true })
 }
 
 onMounted(() => {
@@ -32,8 +41,18 @@ onUnmounted(stopPolling)
 
 function startPolling() {
     stopPolling()
+    pollCount = 0
+    pollTimedOut.value = false
     pollInterval = setInterval(async () => {
         if (!props.selectedContract?.id) return
+
+        pollCount++
+        if (pollCount >= POLL_LIMIT) {
+            stopPolling()
+            pollTimedOut.value = true
+            return
+        }
+
         try {
             const res = await fetch(route('analysis.status', { contract: props.selectedContract.id }), {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
@@ -141,19 +160,43 @@ function fmt(amount) {
                 <div v-else-if="isProcessing"
                      class="flex flex-col items-center justify-center h-64 rounded-2xl"
                      style="background: var(--color-bg-card); box-shadow: var(--shadow-card);">
-                    <div class="w-12 h-12 rounded-full mb-4 flex items-center justify-center"
-                         style="background: var(--color-primary-container);">
-                        <span class="material-symbols-outlined animate-spin" style="font-size: 28px; color: var(--color-primary);">sync</span>
-                    </div>
-                    <p class="font-bold text-lg mb-2" style="color: var(--color-text-primary);">Analizando contrato…</p>
-                    <p class="text-sm text-center max-w-xs" style="color: var(--color-text-secondary);">
-                        La IA está revisando eventos, cartas, órdenes de cambio y diarios de obra. Esto puede tomar hasta 2 minutos.
-                    </p>
-                    <div class="flex items-center gap-1.5 mt-4">
-                        <span class="w-2 h-2 rounded-full animate-bounce" style="background: var(--color-primary); animation-delay: 0ms;"></span>
-                        <span class="w-2 h-2 rounded-full animate-bounce" style="background: var(--color-primary); animation-delay: 150ms;"></span>
-                        <span class="w-2 h-2 rounded-full animate-bounce" style="background: var(--color-primary); animation-delay: 300ms;"></span>
-                    </div>
+
+                    <!-- Timeout: el worker tardó demasiado -->
+                    <template v-if="pollTimedOut">
+                        <span class="material-symbols-outlined mb-3" style="font-size: 40px; color: var(--color-text-muted);">hourglass_disabled</span>
+                        <p class="font-bold text-lg mb-2" style="color: var(--color-text-primary);">El análisis está tomando más de lo esperado</p>
+                        <p class="text-sm text-center max-w-xs mb-5" style="color: var(--color-text-secondary);">
+                            El proceso puede haber terminado en segundo plano. Recarga para ver el resultado.
+                        </p>
+                        <button @click="manualReload"
+                                class="flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm"
+                                style="background: var(--gradient-primary); color: var(--color-on-primary); border: none; cursor: pointer;">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">refresh</span>
+                            Recargar resultado
+                        </button>
+                    </template>
+
+                    <!-- Procesando normal -->
+                    <template v-else>
+                        <div class="w-12 h-12 rounded-full mb-4 flex items-center justify-center"
+                             style="background: var(--color-primary-container);">
+                            <span class="material-symbols-outlined animate-spin" style="font-size: 28px; color: var(--color-primary);">sync</span>
+                        </div>
+                        <p class="font-bold text-lg mb-2" style="color: var(--color-text-primary);">Analizando contrato…</p>
+                        <p class="text-sm text-center max-w-xs" style="color: var(--color-text-secondary);">
+                            La IA está revisando eventos, cartas, órdenes de cambio y diarios de obra. Esto puede tomar hasta 2 minutos.
+                        </p>
+                        <div class="flex items-center gap-1.5 mt-4">
+                            <span class="w-2 h-2 rounded-full animate-bounce" style="background: var(--color-primary); animation-delay: 0ms;"></span>
+                            <span class="w-2 h-2 rounded-full animate-bounce" style="background: var(--color-primary); animation-delay: 150ms;"></span>
+                            <span class="w-2 h-2 rounded-full animate-bounce" style="background: var(--color-primary); animation-delay: 300ms;"></span>
+                        </div>
+                        <button @click="manualReload"
+                                class="mt-5 text-xs underline"
+                                style="background: none; border: none; cursor: pointer; color: var(--color-text-muted);">
+                            ¿Ya terminó? Recargar manualmente
+                        </button>
+                    </template>
                 </div>
 
                 <!-- Sin análisis -->
