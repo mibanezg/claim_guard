@@ -18,6 +18,7 @@ RUN apk add --no-cache \
     git \
     zip \
     unzip \
+    tzdata \
     # GD / image
     libpng-dev \
     libjpeg-turbo-dev \
@@ -34,6 +35,7 @@ RUN apk add --no-cache \
     chromium-chromedriver \
     fontconfig \
     ttf-freefont
+    
 
 # PHP extensions
 RUN docker-php-ext-configure gd \
@@ -94,6 +96,8 @@ RUN mkdir -p /var/log/supervisor /var/log/nginx \
 
 # Chromium sin sandbox para entornos Docker
 ENV CHROMIUM_EXECUTABLE=/usr/bin/chromium-browser
+ENV TZ=America/Santiago
+RUN ln -sf /usr/share/zoneinfo/America/Santiago /etc/localtime
 ENV CHROME_FLAGS="--no-sandbox --disable-dev-shm-usage"
 
 EXPOSE 80
